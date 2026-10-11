@@ -1,6 +1,6 @@
 <div align="center">
 
-# everett
+# Everett
 
 **Run your distributed system in ten thousand parallel universes.<br>
 Find the one where it breaks. Shrink it to a story you can read in ten seconds.<br>
