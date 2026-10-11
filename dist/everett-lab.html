@@ -1,0 +1,4584 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Everett Lab</title>
+<meta name="description" content="Deterministic multiverse testing for distributed systems — explore universes, find the one that breaks, and scrub through it.">
+<style>
+:root {
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --panel-2: #f0f2f5;
+  --border: #dde1e7;
+  --text: #1b2130;
+  --muted: #5c6779;
+  --faint: #a7afbc;
+  --grid: #e8ebf0;
+  --accent: #0a84a8;
+  --leader: #c98500;
+  --candidate: #7a4fd6;
+  --follower: #b8c0cc;
+  --ok: #2f9e44;
+  --info: #d08c00;
+  --failop: #98a2b3;
+  --bad: #e03131;
+  --fault: #e6a700;
+  --pause: #8892a3;
+  --m-blue: #3b7bdb;
+  --m-teal: #12a594;
+  --m-violet: #8b5cf6;
+  --m-orange: #e8730c;
+  --m-red: #e03131;
+  --m-gray: #8a94a6;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 4px 16px rgba(16, 24, 40, .06);
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0a0d13;
+    --panel: #10141c;
+    --panel-2: #161b25;
+    --border: #232a37;
+    --text: #d9dfe9;
+    --muted: #8d97a9;
+    --faint: #4a5466;
+    --grid: #1a202b;
+    --accent: #5fd0ea;
+    --leader: #ffc94d;
+    --candidate: #b99cff;
+    --follower: #3a4352;
+    --ok: #7fd66a;
+    --info: #ffc94d;
+    --failop: #5a6476;
+    --bad: #ff6b6b;
+    --fault: #ffd166;
+    --pause: #6d7789;
+    --m-blue: #6aa5ff;
+    --m-teal: #3ad6c0;
+    --m-violet: #b99cff;
+    --m-orange: #ff9f5a;
+    --m-red: #ff6b6b;
+    --m-gray: #7c8698;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0a0d13;
+  --panel: #10141c;
+  --panel-2: #161b25;
+  --border: #232a37;
+  --text: #d9dfe9;
+  --muted: #8d97a9;
+  --faint: #4a5466;
+  --grid: #1a202b;
+  --accent: #5fd0ea;
+  --leader: #ffc94d;
+  --candidate: #b99cff;
+  --follower: #3a4352;
+  --ok: #7fd66a;
+  --info: #ffc94d;
+  --failop: #5a6476;
+  --bad: #ff6b6b;
+  --fault: #ffd166;
+  --pause: #6d7789;
+  --m-blue: #6aa5ff;
+  --m-teal: #3ad6c0;
+  --m-violet: #b99cff;
+  --m-orange: #ff9f5a;
+  --m-red: #ff6b6b;
+  --m-gray: #7c8698;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.45 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+
+/* ── header ─────────────────────────────────────────────────────────────── */
+.top {
+  display: flex; align-items: center; gap: 16px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  position: sticky; top: 0; z-index: 5;
+}
+.brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.logo { width: 28px; height: 28px; color: var(--accent); }
+.name { font: 600 15px/1.1 var(--mono); letter-spacing: .02em; }
+.tag { color: var(--muted); font-size: 11px; }
+.verdict {
+  flex: 1; min-width: 0;
+  font-size: 12.5px;
+  padding: 6px 10px; border-radius: 8px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.verdict.bad { background: color-mix(in srgb, var(--bad) 12%, transparent); color: var(--bad); }
+.verdict.good { background: color-mix(in srgb, var(--ok) 12%, transparent); color: var(--ok); }
+.verdict .meta { color: var(--muted); margin-left: 8px; }
+.top-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ── controls ───────────────────────────────────────────────────────────── */
+button {
+  border: 1px solid var(--border); background: var(--panel-2);
+  border-radius: 7px; padding: 5px 10px; cursor: pointer;
+}
+button:hover { border-color: var(--faint); }
+button:disabled { opacity: .5; cursor: default; }
+button.primary {
+  background: var(--accent); border-color: var(--accent);
+  color: var(--bg); font-weight: 600;
+}
+button.primary:hover { filter: brightness(1.08); }
+button.ghost { background: transparent; }
+button.icon { width: 32px; padding: 5px 0; }
+select, input[type="number"] {
+  background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: 7px; padding: 5px 8px; width: 100%;
+}
+
+/* ── layout ─────────────────────────────────────────────────────────────── */
+.layout {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  min-height: calc(100vh - 53px);
+}
+.lab {
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.lab h2 { margin: 0 0 8px; font-size: 14px; }
+.lab h3, .panel h3 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.lab section { display: flex; flex-direction: column; gap: 6px; }
+.lab .row2 { flex-direction: row; gap: 10px; }
+.lab .buttons { flex-direction: row; gap: 8px; }
+.lab .buttons .primary { flex: 1; }
+.field { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.field > span { font-size: 11px; color: var(--muted); }
+.muted { color: var(--muted); }
+.small { font-size: 12px; margin: 0; }
+
+.bugs { display: flex; flex-direction: column; gap: 4px; }
+.bug {
+  display: grid; grid-template-columns: 16px 1fr; gap: 8px; align-items: start;
+  padding: 6px 8px; border-radius: 7px; border: 1px solid transparent; cursor: pointer;
+}
+.bug:hover { background: var(--panel-2); }
+.bug.on { border-color: color-mix(in srgb, var(--bad) 45%, transparent); background: color-mix(in srgb, var(--bad) 7%, transparent); }
+.bug input { margin: 2px 0 0; accent-color: var(--bad); }
+.bug b { font: 600 12px var(--mono); }
+.bug span { display: block; color: var(--muted); font-size: 11.5px; line-height: 1.35; margin-top: 2px; }
+
+.grid { width: 100%; height: 150px; border-radius: 8px; background: var(--panel-2); display: block; cursor: pointer; }
+.grid[hidden] { display: none; }
+.lab-status { min-height: 3.5em; }
+.lab-status b { color: var(--text); }
+.lab-status .bad { color: var(--bad); }
+.lab-status .good { color: var(--ok); }
+
+/* ── viewer ─────────────────────────────────────────────────────────────── */
+.viewer { display: flex; flex-direction: column; min-width: 0; padding: 12px 16px 16px; gap: 10px; }
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.transport, .view-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.transport select { width: auto; }
+.clock { font: 600 14px var(--mono); min-width: 74px; text-align: right; }
+.chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.chip {
+  font: 11px var(--mono); padding: 3px 8px; border-radius: 999px;
+  border: 1px solid var(--border); cursor: pointer; user-select: none;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.chip i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.chip.off { opacity: .4; text-decoration: line-through; }
+
+.diagram-wrap {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  min-height: 220px;
+}
+#diagram { display: block; width: 100%; cursor: crosshair; touch-action: none; }
+.tip {
+  position: absolute; pointer-events: none; z-index: 3;
+  max-width: 380px;
+  background: var(--panel); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 8px 10px; font-size: 12px;
+}
+.tip .h { font-weight: 600; margin-bottom: 3px; }
+.tip pre { margin: 4px 0 0; font: 11px/1.4 var(--mono); white-space: pre-wrap; word-break: break-all; color: var(--muted); max-height: 180px; overflow: hidden; }
+
+.scrub { height: 34px; }
+#scrub-canvas { width: 100%; height: 34px; display: block; cursor: pointer; }
+
+.panels { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 12px; min-height: 0; }
+.panel {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px; min-width: 0; box-shadow: var(--shadow);
+  max-height: 420px; overflow: auto;
+}
+.panel h3 .muted { text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 6px; font-family: var(--mono); }
+.state-row { display: flex; gap: 12px; align-items: flex-start; }
+#topology { width: 150px; height: 150px; flex-shrink: 0; }
+.states { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; }
+.node {
+  border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px;
+  display: grid; grid-template-columns: 54px 1fr; gap: 2px 10px; align-items: center;
+}
+.node .id { font: 600 13px var(--mono); }
+.node .role { font: 11px var(--mono); padding: 1px 6px; border-radius: 4px; display: inline-block; }
+.node .facts { font: 11.5px var(--mono); color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; }
+.node .facts b { color: var(--text); font-weight: 500; }
+.node.down { opacity: .55; border-style: dashed; }
+.logrow { grid-column: 2; display: flex; gap: 2px; flex-wrap: wrap; margin-top: 3px; }
+.logrow i {
+  width: 14px; height: 14px; border-radius: 3px; display: inline-block;
+  font: 9px/14px var(--mono); text-align: center; font-style: normal; color: #0a0d13;
+}
+.logrow i.uncommitted { opacity: .45; outline: 1px dashed var(--faint); outline-offset: -1px; }
+.kv { grid-column: 2; font: 11px var(--mono); color: var(--muted); }
+
+.story { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 1px; }
+.story li {
+  display: grid; grid-template-columns: 62px 1fr; gap: 10px;
+  padding: 4px 6px; border-radius: 6px; cursor: pointer; font-size: 12.5px;
+}
+.story li:hover { background: var(--panel-2); }
+.story li.past { opacity: 1; }
+.story li.future { opacity: .45; }
+.story li.now { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.story .t { font: 11.5px var(--mono); color: var(--muted); padding-top: 1px; }
+.story .fault { color: var(--fault); }
+.story .culprit, .story .violation { color: var(--bad); font-weight: 600; }
+.story .op { color: var(--muted); }
+
+@media (max-width: 980px) {
+  .layout { grid-template-columns: 1fr; }
+  .lab { border-right: 0; border-bottom: 1px solid var(--border); }
+  .panels { grid-template-columns: 1fr; }
+  .verdict { display: none; }
+}
+@media (max-width: 520px) {
+  .viewer { padding: 10px 16px 16px; }
+  .state-row { flex-direction: column; }
+  .tag { display: none; }
+}
+
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+      <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".35"/>
+      <circle cx="16" cy="16" r="8" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".6"/>
+      <circle cx="16" cy="16" r="3.2" fill="currentColor"/>
+      <circle cx="27" cy="11" r="2" fill="var(--bad)"/>
+    </svg>
+    <div>
+      <div class="name">everett</div>
+      <div class="tag">deterministic multiverse testing</div>
+    </div>
+  </div>
+  <div id="verdict" class="verdict"></div>
+  <div class="top-actions">
+    <button id="btn-download" class="ghost" title="Download this universe as a repro file">⤓ repro</button>
+    <button id="btn-theme" class="ghost" title="Toggle light/dark">◐</button>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="lab" id="lab">
+    <section>
+      <h2>Lab</h2>
+      <label class="field">
+        <span>System</span>
+        <select id="sys"></select>
+      </label>
+      <p id="sys-summary" class="muted small"></p>
+    </section>
+    <section>
+      <h3>Planted bugs</h3>
+      <div id="bugs" class="bugs"></div>
+    </section>
+    <section class="row2">
+      <label class="field"><span>Universes</span><input id="n-seeds" type="number" min="1" max="100000" value="2000"></label>
+      <label class="field"><span>From seed</span><input id="n-start" type="number" min="1" value="1"></label>
+    </section>
+    <section class="buttons">
+      <button id="btn-explore" class="primary">Explore the multiverse</button>
+      <button id="btn-run" class="ghost" title="Run and show the 'from seed' universe">Run one</button>
+    </section>
+    <section>
+      <canvas id="grid" class="grid" height="150" hidden></canvas>
+      <div id="lab-status" class="lab-status muted small">Pick a bug (or none) and explore. Every universe is a different world of partitions, crashes, pauses and clock drift — all reproducible from its seed.</div>
+    </section>
+  </aside>
+
+  <section class="viewer">
+    <div class="toolbar">
+      <div class="transport">
+        <button id="btn-prev" class="icon" title="Previous event (←)">⏮</button>
+        <button id="btn-play" class="icon" title="Play / pause (space)">▶</button>
+        <button id="btn-next" class="icon" title="Next event (→)">⏭</button>
+        <select id="speed" title="Playback speed">
+          <option value="0.02">0.02×</option>
+          <option value="0.1" selected>0.1×</option>
+          <option value="0.5">0.5×</option>
+          <option value="1">1×</option>
+        </select>
+        <span id="clock" class="clock">0.000s</span>
+      </div>
+      <div class="view-actions">
+        <button id="btn-fit" class="ghost" title="Fit whole universe (f)">fit</button>
+        <button id="btn-focus" class="ghost" title="Zoom to the violation (v)">violation</button>
+        <div id="msg-filter" class="chips" title="Show/hide message types"></div>
+      </div>
+    </div>
+    <div class="diagram-wrap" id="diagram-wrap">
+      <canvas id="diagram"></canvas>
+      <div id="tip" class="tip" hidden></div>
+    </div>
+    <div class="scrub" id="scrub">
+      <canvas id="scrub-canvas"></canvas>
+    </div>
+    <div class="panels">
+      <div class="panel">
+        <h3>World state <span id="state-time" class="muted"></span></h3>
+        <div class="state-row">
+          <canvas id="topology" width="150" height="150" title="Who can talk to whom right now"></canvas>
+          <div id="states" class="states"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Story</h3>
+        <ol id="story" class="story"></ol>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+window.EVERETT_DATA = {"trace":null,"system":null,"meta":null};
+</script>
+<script>
+(function () {
+"use strict";
+const __defs = {
+"src/index.js": function (__exports, __require) {
+// Everett — deterministic multiverse testing for distributed systems.
+//
+// Public API. Everything here is plain JavaScript with no dependencies and no
+// Node-specific imports: it runs the same in Node, Deno, Bun and the browser.
+
+{ const __m = __require("src/world.js"); __exports.World = __m.World; __exports.CALL = __m.CALL; __exports.TIMER = __m.TIMER; }
+{ const __m = __require("src/network.js"); __exports.Network = __m.Network; __exports.DEFAULT_NETWORK = __m.DEFAULT_NETWORK; }
+{ const __m = __require("src/disk.js"); __exports.Disk = __m.Disk; }
+{ const __m = __require("src/rng.js"); __exports.Rng = __m.Rng; __exports.hash32 = __m.hash32; __exports.mix32 = __m.mix32; }
+{ const __m = __require("src/trace.js"); __exports.Recorder = __m.Recorder; }
+{ const __m = __require("src/workload.js"); __exports.History = __m.History; __exports.Workload = __m.Workload; __exports.kvGenerator = __m.kvGenerator; }
+{ const __m = __require("src/scenario.js"); __exports.makeScenario = __m.makeScenario; __exports.makeCuts = __m.makeCuts; __exports.FAULT_TYPES = __m.FAULT_TYPES; __exports.PARTITION_KINDS = __m.PARTITION_KINDS; __exports.LATENCY_PROFILES = __m.LATENCY_PROFILES; }
+{ const __m = __require("src/run.js"); __exports.runScenario = __m.runScenario; __exports.applyFault = __m.applyFault; }
+{ const __m = __require("src/shrink.js"); __exports.shrink = __m.shrink; __exports.scenarioSize = __m.scenarioSize; __exports.complexity = __m.complexity; }
+{ const __m = __require("src/explore.js"); __exports.exploreSync = __m.exploreSync; __exports.exploreAsync = __m.exploreAsync; __exports.investigate = __m.investigate; }
+{ const __m = __require("src/narrate.js"); __exports.narrate = __m.narrate; __exports.describeFault = __m.describeFault; __exports.describeEvent = __m.describeEvent; }
+{ const __m = __require("src/checker/linearizability.js"); __exports.checkLinearizable = __m.checkLinearizable; }
+{ const __m = __require("src/checker/models.js"); __exports.kvModel = __m.kvModel; __exports.models = __m.models; }
+{ const __m = __require("src/util.js"); __exports.clone = __m.clone; __exports.fmtTime = __m.fmtTime; __exports.components = __m.components; }
+
+const VERSION = '0.1.0';
+
+__exports.VERSION = VERSION;
+},
+"src/world.js": function (__exports, __require) {
+// The World: a single-threaded, discrete-event universe.
+//
+// Everything that could make a distributed system nondeterministic — time,
+// randomness, message delivery order, disk durability, process scheduling —
+// is owned by the World and derived from one 32-bit seed. Given the same seed
+// and the same scenario, a run is bit-for-bit identical, every time, on every
+// machine. That is the whole trick: once a bug is caught in a universe, it can
+// be replayed forever.
+
+const { Rng, hash32, hash6, mix32, unit, hashString } = __require("src/rng.js");
+const { Heap } = __require("src/heap.js");
+const { Disk } = __require("src/disk.js");
+const { Network, DELIVER } = __require("src/network.js");
+const { hex32 } = __require("src/util.js");
+
+const TIMER = 2;
+const CALL = 3;
+const US = 1000;
+const DISK = hashString('disk');
+
+class World {
+  constructor(opts = {}) {
+    this.seed = (opts.seed ?? 1) >>> 0;
+    this.rng = new Rng(hash32(this.seed, 'world'));
+    this.now = 0;
+    this.seq = 0;
+    this.queue = new Heap();
+    this.actors = new Map();
+    this.actorList = [];
+    this.nodeIds = [];
+    this.clientIds = [];
+    this.monitors = [];
+    this.hooks = [];
+    this.violation = null;
+    this.stopped = false;
+    this.events = 0;
+    this.maxEvents = opts.maxEvents ?? 3_000_000;
+    this.diskLoss = opts.diskLoss ?? 'all';
+    this.recorder = opts.recorder ?? null;
+    if (this.recorder) this.recorder.attach(this);
+    this.network = new Network(this, opts.network);
+    this.current = null;
+    this.fp1 = 0x6a09e667;
+    this.fp2 = 0xbb67ae85;
+  }
+
+  // ── actors ────────────────────────────────────────────────────────────────
+
+  addNode(id, factory) { return this.addActor(id, 'node', factory); }
+  addClient(id, factory) { return this.addActor(id, 'client', factory); }
+
+  addActor(id, kind, factory) {
+    if (this.actors.has(id)) throw new Error(`duplicate actor id "${id}"`);
+    const a = {
+      id, kind, factory,
+      index: this.actorList.length,
+      impl: null, ctx: null,
+      alive: false, inc: 0, crashes: 0,
+      timers: new Map(), timerSeq: 0,
+      disk: kind === 'node' ? new Disk() : null,
+      paused: false, deferred: [],
+      clock: { base: 0, local: 0, rate: 1 },
+      rng: null,
+    };
+    this.actors.set(id, a);
+    this.actorList.push(a);
+    (kind === 'node' ? this.nodeIds : this.clientIds).push(id);
+    return a;
+  }
+
+  start() {
+    Object.freeze(this.nodeIds);
+    Object.freeze(this.clientIds);
+    for (const a of this.actorList) this.boot(a);
+  }
+
+  boot(a) {
+    a.alive = true;
+    a.inc++;
+    a.rng = new Rng(hash32(this.seed, 'actor', a.index, a.inc));
+    a.ctx = this.makeContext(a);
+    this.recorder?.life(a, a.inc === 1 ? 'boot' : 'restart');
+    this.invoke(a, () => {
+      a.impl = a.factory(a.ctx);
+      a.impl.onStart?.();
+    });
+  }
+
+  makeContext(a) {
+    const world = this;
+    const inc = a.inc;
+    const live = () => a.alive && a.inc === inc;
+    const disk = a.disk;
+    const ctx = {
+      id: a.id,
+      kind: a.kind,
+      nodes: this.nodeIds,
+      clients: this.clientIds,
+      peers: this.nodeIds.filter((n) => n !== a.id),
+      now: () => world.localTime(a) / US,
+      random: () => a.rng.float(),
+      randomInt: (lo, hi) => a.rng.range(lo, hi),
+      send: (to, msg) => { if (live()) world.network.send(a, to, msg); },
+      setTimer: (delayMs, fn) => (live() ? world.setTimer(a, delayMs, fn) : -1),
+      cancelTimer: (id) => { if (id !== null && id !== undefined) a.timers.delete(id); },
+      emit: (kind, data) => { if (live()) world.emit(a, kind, data); },
+      log: (...args) => { if (live()) world.recorder?.log(a, args); },
+      disk: disk && Object.freeze({
+        get: (k) => disk.get(k),
+        has: (k) => disk.has(k),
+        set: (k, v) => { if (live()) disk.set(k, v); },
+        delete: (k) => { if (live()) disk.delete(k); },
+        fsync: () => { if (live()) disk.fsync(); },
+      }),
+    };
+    return Object.freeze(ctx);
+  }
+
+  // ── time & scheduling ─────────────────────────────────────────────────────
+
+  localTime(a) {
+    return a.clock.local + (this.now - a.clock.base) * a.clock.rate;
+  }
+
+  schedule(t, ev) {
+    ev.t = t;
+    ev.seq = ++this.seq;
+    this.queue.push(ev);
+  }
+
+  at(t, fn) { this.schedule(t, { type: CALL, fn }); }
+
+  setTimer(a, delayMs, fn) {
+    if (!(delayMs >= 0)) throw new Error(`setTimer(): bad delay ${delayMs}`);
+    if (typeof fn !== 'function') throw new Error('setTimer(): callback must be a function');
+    const id = ++a.timerSeq;
+    a.timers.set(id, fn);
+    // Timers run on the node's (possibly skewed) local clock.
+    const real = Math.max(1, Math.round((delayMs * US) / a.clock.rate));
+    this.schedule(this.now + real, { type: TIMER, actor: a, inc: a.inc, id });
+    return id;
+  }
+
+  fold(a, b, c, d) {
+    this.fp1 = hash6(this.fp1, a >>> 0, b >>> 0, c >>> 0, d >>> 0, 0x51);
+    this.fp2 = mix32(this.fp2 ^ hash6(d >>> 0, c >>> 0, b >>> 0, a >>> 0, this.fp2, 0x7a));
+  }
+
+  get fingerprint() { return hex32(this.fp1) + hex32(this.fp2); }
+
+  runUntil(tEnd) {
+    const q = this.queue;
+    while (!this.stopped) {
+      const ev = q.peek();
+      if (!ev || ev.t > tEnd) break;
+      q.pop();
+      this.now = ev.t;
+      this.dispatch(ev);
+      if (++this.events > this.maxEvents) {
+        this.fail('event-storm', `event budget exhausted after ${this.maxEvents} events — livelock or message storm?`);
+      }
+    }
+    if (!this.stopped) this.now = Math.max(this.now, tEnd);
+  }
+
+  dispatch(ev) {
+    switch (ev.type) {
+      case DELIVER:
+        return this.network.deliver(ev);
+      case TIMER: {
+        const a = ev.actor;
+        if (!a.alive || a.inc !== ev.inc) return;
+        if (a.paused) { a.deferred.push(ev); return; }
+        const fn = a.timers.get(ev.id);
+        if (!fn) return; // cancelled
+        a.timers.delete(ev.id);
+        this.fold(TIMER, a.index, ev.id, ev.t);
+        this.recorder?.timer(a);
+        return this.invoke(a, fn);
+      }
+      case CALL:
+        return ev.fn();
+    }
+  }
+
+  // Run a piece of actor code with attribution: exceptions become findings,
+  // Math.random routes to the actor's own stream, and the recorder snapshots
+  // the actor's state afterwards.
+  invoke(a, fn) {
+    const prev = this.current;
+    this.current = a;
+    try {
+      fn();
+    } catch (err) {
+      const name = (err && err.name) || 'Error';
+      this.fail(`exception:${name}`, `${a.id} threw ${name}: ${err && err.message}`, {
+        node: a.id,
+        stack: err && err.stack ? String(err.stack).split('\n').slice(0, 6).join('\n') : undefined,
+      });
+    } finally {
+      this.current = prev;
+    }
+    if (this.recorder && a.impl) this.recorder.snapshot(a);
+  }
+
+  // ── observation ───────────────────────────────────────────────────────────
+
+  emit(a, kind, data) {
+    const e = { t: this.now, node: a.id, kind, data };
+    this.recorder?.emit(e);
+    for (let i = 0; i < this.hooks.length; i++) this.hooks[i](e);
+    for (const m of this.monitors) {
+      if (!m.onEmit || this.violation) continue;
+      const v = m.onEmit(e, this);
+      if (v) this.monitorFail(m, v, a.id);
+    }
+  }
+
+  monitorFail(m, v, node) {
+    const rule = typeof v === 'string' ? m.name : v.rule || m.name;
+    const message = typeof v === 'string' ? v : v.message;
+    this.fail(`invariant:${rule}`, message, { rule, node, monitor: m.name });
+  }
+
+  fail(signature, message, details = {}) {
+    if (this.violation) return;
+    this.violation = { signature, message, time: this.now, ...details };
+    this.stopped = true;
+    this.recorder?.violation(this.violation);
+  }
+
+  // ── faults ────────────────────────────────────────────────────────────────
+
+  crash(id) {
+    const a = this.actors.get(id);
+    if (!a || !a.alive || a.kind !== 'node') return false;
+    a.alive = false;
+    a.inc++;
+    a.crashes++;
+    a.impl = null;
+    a.ctx = null;
+    a.timers.clear();
+    a.paused = false;
+    a.deferred = [];
+    const crashNo = a.crashes;
+    const lost = a.disk.crash(this.diskLoss, (i) => unit(hash6(this.seed, DISK, a.index, crashNo, i, 0)));
+    this.fold(0xc4a54, a.index, crashNo, lost);
+    this.recorder?.life(a, 'crash', { lostWrites: lost });
+    return true;
+  }
+
+  restart(id) {
+    const a = this.actors.get(id);
+    if (!a || a.alive) return false;
+    this.boot(a);
+    return true;
+  }
+
+  pause(id) {
+    const a = this.actors.get(id);
+    if (!a || !a.alive || a.paused) return false;
+    a.paused = true;
+    this.recorder?.life(a, 'pause');
+    return true;
+  }
+
+  resume(id) {
+    const a = this.actors.get(id);
+    if (!a || !a.paused) return false;
+    a.paused = false;
+    const backlog = a.deferred;
+    a.deferred = [];
+    this.recorder?.life(a, 'resume', { backlog: backlog.length });
+    for (const ev of backlog) this.schedule(this.now, ev);
+    return true;
+  }
+
+  setClock(id, rate, jumpMs = 0) {
+    const a = this.actors.get(id);
+    if (!a) return false;
+    a.clock = { base: this.now, local: this.localTime(a) + jumpMs * US, rate };
+    this.recorder?.life(a, 'clock', { rate, jump: jumpMs });
+    return true;
+  }
+
+  partition(cuts) { this.network.setCuts(cuts); }
+  heal() { this.network.setCuts([]); }
+
+  // "All faults healed" includes the weather: no more loss, duplication or
+  // latency spikes. Liveness is only meaningful on a healthy network.
+  calmNetwork() {
+    const cfg = this.network.cfg;
+    cfg.drop = 0;
+    cfg.dup = 0;
+    cfg.latency = { ...cfg.latency, tail: 0 };
+  }
+
+  get stats() {
+    return {
+      events: this.events,
+      time: this.now,
+      sent: this.network.sent,
+      delivered: this.network.delivered,
+      dropped: this.network.dropped,
+    };
+  }
+}
+
+__exports.TIMER = TIMER;
+__exports.CALL = CALL;
+__exports.World = World;
+},
+"src/rng.js": function (__exports, __require) {
+// Deterministic randomness.
+//
+// Two flavours live here:
+//   * Rng — a fast sequential stream (sfc32) that can be forked by label.
+//   * hash32/unit — counter-based randomness: a value derived purely from
+//     (seed, coordinates). The network uses this so that the fate of message #7
+//     on link n1→n3 does not change when some unrelated event elsewhere is
+//     removed. That locality is what makes shrinking converge.
+
+function hashString(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
+}
+
+// lowbias32 by Chris Wellons — a strong 32-bit integer finalizer.
+function mix32(x) {
+  x = x >>> 0;
+  x ^= x >>> 16;
+  x = Math.imul(x, 0x7feb352d);
+  x ^= x >>> 15;
+  x = Math.imul(x, 0x846ca68b);
+  x ^= x >>> 16;
+  return x >>> 0;
+}
+
+function word(p) {
+  if (typeof p === 'string') return hashString(p);
+  if (p >= 0 && p <= 0xffffffff && Number.isInteger(p)) return p >>> 0;
+  // Larger or fractional numbers: fold high and low parts together.
+  const hi = Math.floor(p / 4294967296);
+  return (mix32(hi) ^ (p >>> 0)) >>> 0;
+}
+
+function hash32(...parts) {
+  let h = 0x9e3779b9;
+  for (let i = 0; i < parts.length; i++) {
+    h = mix32((h ^ word(parts[i])) + Math.imul(i + 1, 0x85ebca6b));
+  }
+  return h;
+}
+
+// Allocation-free variant for the hot path in the network.
+function hash6(a, b, c, d, e, f) {
+  let h = 0x9e3779b9;
+  h = mix32((h ^ a) + 0x85ebca6b);
+  h = mix32((h ^ b) + 0x0b4611d6);
+  h = mix32((h ^ c) + 0x9100b041);
+  h = mix32((h ^ d) + 0x16fbcb2c);
+  h = mix32((h ^ e) + 0x9cb73517);
+  h = mix32((h ^ f) + 0x22729f02);
+  return h;
+}
+
+const unit = (h) => h / 4294967296;
+
+class Rng {
+  constructor(seed) {
+    const s = typeof seed === 'string' ? hashString(seed) : seed >>> 0;
+    this.seed = s;
+    this.a = mix32(s ^ 0xa0761d65) | 0;
+    this.b = mix32(s ^ 0xe7037ed1) | 0;
+    this.c = mix32(s ^ 0x8ebc6af0) | 0;
+    this.d = 1;
+    for (let i = 0; i < 12; i++) this.next();
+  }
+
+  // sfc32 — passes PractRand, tiny state, fast in JS.
+  next() {
+    let a = this.a, b = this.b, c = this.c, d = this.d;
+    const t = (((a + b) | 0) + d) | 0;
+    this.d = (d + 1) | 0;
+    this.a = b ^ (b >>> 9);
+    this.b = (c + (c << 3)) | 0;
+    c = (c << 21) | (c >>> 11);
+    this.c = (c + t) | 0;
+    return t >>> 0;
+  }
+
+  float() { return this.next() / 4294967296; }
+  int(n) { return Math.floor(this.float() * n); }
+  range(lo, hi) { return lo + this.int(hi - lo + 1); }
+  uniform(lo, hi) { return lo + this.float() * (hi - lo); }
+  chance(p) { return this.float() < p; }
+  pick(arr) { return arr[this.int(arr.length)]; }
+  exp(mean) { return -Math.log(1 - this.float()) * mean; }
+
+  shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = this.int(i + 1);
+      const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+
+  subset(arr, p) { return arr.filter(() => this.chance(p)); }
+
+  fork(label) { return new Rng(hash32(this.seed, label)); }
+}
+
+__exports.hashString = hashString;
+__exports.mix32 = mix32;
+__exports.hash32 = hash32;
+__exports.hash6 = hash6;
+__exports.unit = unit;
+__exports.Rng = Rng;
+},
+"src/heap.js": function (__exports, __require) {
+// Binary min-heap of events ordered by (t, seq). seq is a global insertion
+// counter, so simultaneous events fire in the order they were scheduled —
+// the tie-break is part of what makes a run reproducible.
+
+class Heap {
+  constructor() { this.items = []; }
+
+  get size() { return this.items.length; }
+  peek() { return this.items[0]; }
+
+  push(ev) {
+    const a = this.items;
+    a.push(ev);
+    let i = a.length - 1;
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (!before(ev, a[p])) break;
+      a[i] = a[p];
+      i = p;
+    }
+    a[i] = ev;
+  }
+
+  pop() {
+    const a = this.items;
+    const top = a[0];
+    const last = a.pop();
+    if (a.length > 0) {
+      let i = 0;
+      const n = a.length;
+      for (;;) {
+        const l = 2 * i + 1;
+        if (l >= n) break;
+        const r = l + 1;
+        const c = r < n && before(a[r], a[l]) ? r : l;
+        if (!before(a[c], last)) break;
+        a[i] = a[c];
+        i = c;
+      }
+      a[i] = last;
+    }
+    return top;
+  }
+}
+
+function before(x, y) {
+  return x.t < y.t || (x.t === y.t && x.seq < y.seq);
+}
+
+__exports.Heap = Heap;
+},
+"src/disk.js": function (__exports, __require) {
+// A simulated disk with honest fsync semantics.
+//
+// Writes land in a volatile page cache. fsync() makes them durable. A crash
+// throws away whatever was not synced — either all of it, or (in 'some' mode)
+// a random subset, because real kernels flush dirty pages in whatever order
+// they like. Code that acknowledges before it fsyncs will eventually lose data
+// here, exactly as it would in production.
+
+const { clone } = __require("src/util.js");
+
+const TOMBSTONE = Symbol('deleted');
+
+class Disk {
+  constructor() {
+    this.durable = new Map();
+    this.cache = new Map();
+    this.writes = 0;
+    this.syncs = 0;
+  }
+
+  get(key) {
+    if (this.cache.has(key)) {
+      const v = this.cache.get(key);
+      return v === TOMBSTONE ? undefined : clone(v);
+    }
+    return clone(this.durable.get(key));
+  }
+
+  has(key) {
+    if (this.cache.has(key)) return this.cache.get(key) !== TOMBSTONE;
+    return this.durable.has(key);
+  }
+
+  set(key, value) {
+    this.writes++;
+    this.cache.set(key, clone(value));
+  }
+
+  delete(key) {
+    this.writes++;
+    this.cache.set(key, TOMBSTONE);
+  }
+
+  fsync() {
+    this.syncs++;
+    for (const [k, v] of this.cache) {
+      if (v === TOMBSTONE) this.durable.delete(k);
+      else this.durable.set(k, v);
+    }
+    this.cache.clear();
+  }
+
+  get dirty() { return this.cache.size; }
+
+  // mode: 'all' loses every unsynced write; 'some' keeps each with p=0.5.
+  // rand(i) supplies deterministic coin flips.
+  crash(mode, rand) {
+    let lost = 0, i = 0;
+    for (const [k, v] of this.cache) {
+      const keep = mode === 'some' && rand(i++) < 0.5;
+      if (keep) {
+        if (v === TOMBSTONE) this.durable.delete(k);
+        else this.durable.set(k, v);
+      } else lost++;
+    }
+    this.cache.clear();
+    return lost;
+  }
+
+  snapshot() {
+    const out = {};
+    for (const [k, v] of this.durable) out[k] = v;
+    return out;
+  }
+}
+
+__exports.Disk = Disk;
+},
+"src/util.js": function (__exports, __require) {
+// Small shared helpers.
+
+const US_PER_MS = 1000;
+const ms = (x) => Math.round(x * US_PER_MS);
+
+// Deep copy for message payloads and disk values. Nodes must never share
+// mutable objects: aliasing between "the network" and "a node's memory" is a
+// classic way for simulators to hide real bugs. This is several times faster
+// than structuredClone for the small plain objects protocols exchange.
+function clone(v) {
+  if (v === null || typeof v !== 'object') return v;
+  if (Array.isArray(v)) {
+    const n = v.length;
+    const out = new Array(n);
+    for (let i = 0; i < n; i++) out[i] = clone(v[i]);
+    return out;
+  }
+  if (v instanceof Map) return new Map([...v].map(([k, x]) => [k, clone(x)]));
+  if (v instanceof Set) return new Set([...v].map(clone));
+  const out = {};
+  for (const k in v) out[k] = clone(v[k]);
+  return out;
+}
+
+function deepEqual(a, b) {
+  if (a === b) return true;
+  if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  const ka = Object.keys(a), kb = Object.keys(b);
+  if (ka.length !== kb.length) return false;
+  for (const k of ka) if (!deepEqual(a[k], b[k])) return false;
+  return true;
+}
+
+function fmtTime(us) {
+  if (us === null || us === undefined) return '∞';
+  if (!Number.isFinite(us)) return '∞';
+  return (us / 1e6).toFixed(3) + 's';
+}
+
+function fmtMs(us) {
+  const v = us / 1000;
+  return v >= 100 ? `${Math.round(v)}ms` : `${v.toFixed(1)}ms`;
+}
+
+function hex32(x) {
+  return (x >>> 0).toString(16).padStart(8, '0');
+}
+
+// Connected components of the "can talk" graph, given a list of directed cuts.
+// Used to describe partitions in human terms: {n1,n2} ⟂ {n3,n4,n5}.
+function components(nodes, cuts) {
+  const blocked = new Set(cuts.map(([a, b]) => a + '>' + b));
+  const seen = new Set();
+  const groups = [];
+  for (const n of nodes) {
+    if (seen.has(n)) continue;
+    const group = [];
+    const stack = [n];
+    seen.add(n);
+    while (stack.length) {
+      const x = stack.pop();
+      group.push(x);
+      for (const y of nodes) {
+        if (seen.has(y)) continue;
+        // Two nodes are grouped only if they can talk in both directions.
+        if (!blocked.has(x + '>' + y) && !blocked.has(y + '>' + x)) {
+          seen.add(y);
+          stack.push(y);
+        }
+      }
+    }
+    groups.push(group.sort());
+  }
+  return groups;
+}
+
+__exports.US_PER_MS = US_PER_MS;
+__exports.ms = ms;
+__exports.clone = clone;
+__exports.deepEqual = deepEqual;
+__exports.fmtTime = fmtTime;
+__exports.fmtMs = fmtMs;
+__exports.hex32 = hex32;
+__exports.components = components;
+},
+"src/network.js": function (__exports, __require) {
+// The simulated network: latency with long tails, loss, duplication,
+// reordering (a side effect of random latency), and arbitrary — including
+// asymmetric and non-transitive — partitions.
+//
+// Every per-message decision is drawn from hash(seed, link, n) where n is the
+// message's sequence number on that directed link. Removing a fault elsewhere
+// therefore leaves most messages' fates untouched, which keeps the shrinker
+// from wandering off into a different universe.
+
+const { hash6, unit, hashString } = __require("src/rng.js");
+const { clone } = __require("src/util.js");
+
+const DELIVER = 1;
+const NET = hashString('net');
+
+const DEFAULT_NETWORK = {
+  latency: { min: 0.5, max: 5, tail: 0, tailMax: 0 }, // milliseconds
+  drop: 0,
+  dup: 0,
+};
+
+class Network {
+  constructor(world, cfg = {}) {
+    this.world = world;
+    this.cfg = {
+      ...DEFAULT_NETWORK,
+      ...cfg,
+      latency: { ...DEFAULT_NETWORK.latency, ...(cfg.latency || {}) },
+    };
+    this.cuts = new Set();
+    this.cutList = [];
+    this.linkSeq = new Map();
+    this.nextId = 0;
+    this.sent = 0;
+    this.delivered = 0;
+    this.dropped = 0;
+  }
+
+  setCuts(cuts) {
+    this.cutList = cuts.map((c) => [c[0], c[1]]);
+    this.cuts = new Set(cuts.map(([a, b]) => a + '>' + b));
+  }
+
+  // Partitions only sever node↔node links. Clients sit "outside" the cluster
+  // and can reach any node — which is exactly how a client ends up talking to
+  // a deposed leader stuck on the wrong side of a partition.
+  isCut(from, to) {
+    if (this.cuts.size === 0) return false;
+    if (from.kind !== 'node' || to.kind !== 'node') return false;
+    return this.cuts.has(from.id + '>' + to.id);
+  }
+
+  latency(u1, u2) {
+    const { min, max, tail, tailMax } = this.cfg.latency;
+    let ms = min + u1 * (max - min);
+    if (tail > 0 && u2 < tail) ms += (u2 / tail) * tailMax;
+    return Math.max(1, Math.round(ms * 1000));
+  }
+
+  send(from, toId, msg) {
+    const w = this.world;
+    const to = w.actors.get(toId);
+    if (!to) throw new Error(`send(): unknown destination "${toId}"`);
+    const payload = clone(msg);
+    const link = from.index * 65536 + to.index;
+    const n = (this.linkSeq.get(link) || 0) + 1;
+    this.linkSeq.set(link, n);
+    const r = (k) => unit(hash6(w.seed, NET, from.index, to.index, n, k));
+
+    this.sent++;
+    const id = ++this.nextId;
+    w.recorder?.send(id, from, to, payload);
+
+    if (this.isCut(from, to)) return this.drop(id, from, to, 'partition');
+    if (this.cfg.drop > 0 && r(1) < this.cfg.drop) return this.drop(id, from, to, 'loss');
+
+    const at = w.now + this.latency(r(2), r(3));
+    w.fold(id, from.index, to.index, at);
+    w.schedule(at, { type: DELIVER, id, from, to, msg: payload });
+
+    if (this.cfg.dup > 0 && r(4) < this.cfg.dup) {
+      const dupId = ++this.nextId;
+      const dupAt = w.now + this.latency(r(5), r(6));
+      w.recorder?.send(dupId, from, to, payload, id);
+      w.fold(dupId, from.index, to.index, dupAt);
+      w.schedule(dupAt, { type: DELIVER, id: dupId, from, to, msg: clone(payload) });
+    }
+  }
+
+  drop(id, from, to, reason) {
+    this.dropped++;
+    this.world.fold(id, from.index, to.index, 0xdead);
+    this.world.recorder?.drop(id, reason);
+  }
+
+  deliver(ev) {
+    const w = this.world;
+    const { from, to } = ev;
+    // A partition also eats packets that were already in flight.
+    if (this.isCut(from, to)) return this.drop(ev.id, from, to, 'partition');
+    if (!to.alive) return this.drop(ev.id, from, to, 'down');
+    if (to.paused) { to.deferred.push(ev); return; }
+    this.delivered++;
+    w.fold(ev.id, to.index, ev.t, 1);
+    w.recorder?.deliver(ev.id);
+    w.invoke(to, () => to.impl.onMessage?.(from.id, ev.msg));
+  }
+}
+
+__exports.DELIVER = DELIVER;
+__exports.DEFAULT_NETWORK = DEFAULT_NETWORK;
+__exports.Network = Network;
+},
+"src/trace.js": function (__exports, __require) {
+// The Recorder watches a World without touching it: it never draws randomness
+// and never schedules events, so a recorded run is the same universe as an
+// unrecorded one. Its output is the trace the time-travel debugger renders.
+
+const { clone } = __require("src/util.js");
+
+class Recorder {
+  constructor({ snapshots = true } = {}) {
+    this.wantSnapshots = snapshots;
+    this.messages = [];
+    this.byId = new Map();
+    this.emits = [];
+    this.logs = [];
+    this.lifeEvents = [];
+    this.faults = [];
+    this.snapshots = [];
+    this.lastSnap = new Map();
+    this.timers = 0;
+    this.violationEvent = null;
+  }
+
+  attach(world) { this.world = world; }
+  get now() { return this.world.now; }
+
+  send(id, from, to, payload, dupOf) {
+    const m = {
+      id, from: from.id, to: to.id,
+      sent: this.now, recv: null, drop: null,
+      type: payload && typeof payload === 'object' && payload.type ? String(payload.type) : typeof payload,
+      payload,
+    };
+    if (dupOf) m.dupOf = dupOf;
+    this.messages.push(m);
+    this.byId.set(id, m);
+  }
+
+  drop(id, reason) {
+    const m = this.byId.get(id);
+    if (m) { m.drop = reason; m.recv = this.now; }
+  }
+
+  deliver(id) {
+    const m = this.byId.get(id);
+    if (m) m.recv = this.now;
+  }
+
+  timer() { this.timers++; }
+
+  life(a, what, extra) {
+    this.lifeEvents.push({ t: this.now, node: a.id, what, ...(extra || {}) });
+  }
+
+  fault(f) { this.faults.push({ t: this.now, ...clone(f) }); }
+
+  emit(e) { this.emits.push({ t: e.t, node: e.node, kind: e.kind, data: clone(e.data) }); }
+
+  log(a, args) {
+    const text = args.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))).join(' ');
+    this.logs.push({ t: this.now, node: a.id, text });
+  }
+
+  snapshot(a) {
+    if (!this.wantSnapshots || typeof a.impl.inspect !== 'function') return;
+    const state = a.impl.inspect();
+    const json = JSON.stringify(state);
+    if (json === this.lastSnap.get(a.id)) return;
+    this.lastSnap.set(a.id, json);
+    this.snapshots.push({ t: this.now, node: a.id, state: JSON.parse(json) });
+  }
+
+  violation(v) { this.violationEvent = { ...v }; }
+
+  toJSON() {
+    const w = this.world;
+    return {
+      nodes: [...w.nodeIds],
+      clients: [...w.clientIds],
+      end: w.now,
+      messages: this.messages.map((m) => ({ ...m, recv: m.recv })),
+      emits: this.emits,
+      logs: this.logs,
+      life: this.lifeEvents,
+      faults: this.faults,
+      snapshots: this.snapshots,
+      timers: this.timers,
+    };
+  }
+}
+
+__exports.Recorder = Recorder;
+},
+"src/workload.js": function (__exports, __require) {
+// Jepsen-style workload: a handful of clients, each issuing one operation at a
+// time against the cluster, with every invocation and completion written to a
+// history. An operation that times out is "info" — it may or may not have
+// happened — and the client continues as a fresh logical process, because the
+// old operation might still land at any point in the future.
+
+const { Rng, hash32 } = __require("src/rng.js");
+const { CALL } = __require("src/world.js");
+
+class History {
+  constructor() { this.ops = []; }
+
+  invoke(process, client, op, t) {
+    const rec = {
+      id: this.ops.length, process, client,
+      f: op.f, key: op.key, value: op.value,
+      invoke: t, complete: null, type: null, output: undefined,
+    };
+    this.ops.push(rec);
+    return rec;
+  }
+
+  complete(rec, type, output, t) {
+    rec.type = type;
+    rec.output = output;
+    rec.complete = t;
+  }
+
+  finalize() {
+    for (const r of this.ops) if (r.type === null) r.type = 'info';
+  }
+}
+
+class Workload {
+  constructor(world, history, { generator, think = [0, 20], stopAt, start = 0 }) {
+    this.world = world;
+    this.history = history;
+    this.generator = generator;
+    this.think = think;
+    this.stopAt = stopAt;
+    this.start0 = start;
+    this.nextProcess = 0;
+    this.clients = [];
+  }
+
+  start() {
+    const w = this.world;
+    for (const id of w.clientIds) {
+      const actor = w.actors.get(id);
+      const c = {
+        id, actor,
+        process: this.nextProcess++,
+        rng: new Rng(hash32(w.seed, 'workload', actor.index)),
+        busy: false,
+      };
+      this.clients.push(c);
+      w.at(this.start0 + this.delay(c), () => this.next(c));
+    }
+  }
+
+  delay(c) {
+    const [lo, hi] = this.think;
+    return Math.round(c.rng.uniform(lo, hi) * 1000);
+  }
+
+  next(c) {
+    const w = this.world;
+    if (w.now >= this.stopAt || c.busy || !c.actor.alive) return;
+    const op = this.generator(c.rng, c.id);
+    const rec = this.history.invoke(c.process, c.id, op, w.now);
+    c.busy = true;
+    let done = false;
+    const complete = (res) => {
+      if (done) return;
+      done = true;
+      const type = res && (res.type === 'ok' || res.type === 'fail') ? res.type : 'info';
+      this.history.complete(rec, type, res ? res.value : undefined, w.now);
+      c.busy = false;
+      if (type === 'info') c.process = this.nextProcess++;
+      w.at(w.now + this.delay(c), () => this.next(c));
+    };
+    w.invoke(c.actor, () => c.actor.impl.invoke(op, complete));
+  }
+}
+
+// A key-value workload over a few registers: reads, blind writes of unique
+// values, and compare-and-set. Unique write values make anomalies explainable
+// ("this read returned 7, but 7 had been overwritten by 9 before it began").
+function kvGenerator({ keys = ['x', 'y'], reads = 0.4, cas = 0.15 } = {}) {
+  let counter = 0;
+  const written = new Map(keys.map((k) => [k, []]));
+  return (rng) => {
+    const key = rng.pick(keys);
+    const r = rng.float();
+    const hist = written.get(key);
+    if (r < reads) return { f: 'get', key };
+    if (r < reads + cas && hist.length > 0) {
+      const from = rng.pick(hist.slice(-3));
+      const to = ++counter;
+      hist.push(to);
+      return { f: 'cas', key, value: [from, to] };
+    }
+    const v = ++counter;
+    hist.push(v);
+    return { f: 'put', key, value: v };
+  };
+}
+
+__exports.History = History;
+__exports.Workload = Workload;
+__exports.kvGenerator = kvGenerator;
+},
+"src/scenario.js": function (__exports, __require) {
+// Scenarios: the complete, explicit description of one universe.
+//
+// A scenario is plain JSON — topology, network weather, disk behaviour,
+// workload mix and a timestamped fault schedule — generated from a seed. The
+// run is a pure function of it. That makes a failing scenario a portable bug
+// report, and it gives the shrinker something concrete to cut down.
+//
+// Generation uses swarm testing (Groce et al., ISSTA 2012): each universe
+// enables a random *subset* of fault types and picks its own intensities.
+// Universes with only one or two kinds of chaos explore deeper into those
+// interactions than universes where everything happens at once.
+
+const { Rng, hash32 } = __require("src/rng.js");
+const { ms } = __require("src/util.js");
+
+const FAULT_TYPES = ['partition', 'crash', 'pause', 'clock'];
+const PARTITION_KINDS = ['halves', 'isolate', 'bridge', 'ring', 'oneway'];
+
+const LATENCY_PROFILES = {
+  lan: { min: 0.1, max: 1 },
+  dc: { min: 0.5, max: 5 },
+  wan: { min: 5, max: 30 },
+};
+
+const KEY_NAMES = ['x', 'y', 'z', 'w', 'v'];
+const round = (x, d = 3) => Math.round(x * 10 ** d) / 10 ** d;
+
+function makeScenario(system, seed, opts = {}) {
+  seed = seed >>> 0;
+  const d = {
+    nodes: 5, clients: [2, 4], duration: 8000, quiesce: 3000,
+    liveness: null, opTimeout: 1000, ...(system.defaults || {}),
+  };
+  // Independent streams per aspect, so pinning one knob (say --nodes 3)
+  // leaves the rest of the universe as it was.
+  const R = (label) => new Rng(hash32(seed, 'scenario', label));
+  const swarm = opts.swarm !== false;
+
+  // ── topology ──
+  let nodes, clients;
+  if (system.topology) {
+    ({ nodes, clients } = system.topology(R('topology'), opts));
+  } else {
+    const tr = R('topology');
+    const nn = opts.nodes ?? (Array.isArray(d.nodes) ? (swarm ? tr.pick(d.nodes) : d.nodes[d.nodes.length - 1]) : d.nodes);
+    const nc = opts.clients ?? (Array.isArray(d.clients) ? tr.range(d.clients[0], d.clients[1]) : d.clients);
+    nodes = Array.from({ length: nn }, (_, i) => `n${i + 1}`);
+    clients = Array.from({ length: nc }, (_, i) => `c${i + 1}`);
+  }
+
+  // ── network weather ──
+  const nr = R('network');
+  const profile = opts.latency ?? (swarm ? nr.pick(['lan', 'dc', 'dc', 'wan']) : 'dc');
+  const tail = swarm && nr.chance(0.4) ? nr.pick([0.01, 0.03]) : 0;
+  const drop = swarm && nr.chance(0.4) ? round(nr.uniform(0.005, 0.08)) : 0;
+  const dup = swarm && nr.chance(0.3) ? round(nr.uniform(0.005, 0.05)) : 0;
+  const network = {
+    latency: { ...LATENCY_PROFILES[profile], tail, tailMax: 80 },
+    drop: opts.drop ?? drop,
+    dup: opts.dup ?? dup,
+    ...(d.network || {}),
+  };
+
+  // ── faults ──
+  const fr = R('faults');
+  const duration = opts.duration ?? d.duration;
+  const quiesce = opts.quiesce ?? Math.min(d.quiesce, duration / 2);
+  const healAt = duration - quiesce;
+  const targetsFor = (type) => {
+    const t = system.targets?.[type];
+    return (typeof t === 'function' ? t(nodes) : t) ?? nodes;
+  };
+  const allowed = (system.faults ?? FAULT_TYPES).filter((t) => targetsFor(t).length > (t === 'partition' ? 1 : 0));
+  let types;
+  if (opts.faults) types = opts.faults.filter((t) => allowed.includes(t));
+  else if (swarm) {
+    types = fr.subset(allowed, 0.6);
+    if (types.length === 0 && !fr.chance(0.05)) types = [fr.pick(allowed)];
+  } else types = allowed;
+  let kinds = swarm ? fr.subset(PARTITION_KINDS, 0.6) : PARTITION_KINDS;
+  if (kinds.length === 0) kinds = [fr.pick(PARTITION_KINDS)];
+  const gap = opts.gap ?? (swarm ? fr.uniform(80, 1200) : 400);
+  const maxLen = opts.maxLen ?? (swarm ? fr.uniform(150, 2500) : 1000);
+  const diskLoss = opts.diskLoss ?? (fr.chance(0.5) ? 'all' : 'some');
+
+  const faults = [];
+  let t = fr.uniform(100, 500);
+  let g = 0;
+  while (types.length > 0 && t < healAt) {
+    const type = fr.pick(types);
+    // Skewed toward short faults: a 20ms crash-and-restart is a very different
+    // event from a 2s outage, and both are worth having.
+    const u = fr.float();
+    const end = Math.min(t + 5 + (maxLen - 5) * u * u, healAt);
+    const at = ms(t), until = ms(end);
+    g++;
+    if (type === 'partition') {
+      const kind = fr.pick(kinds);
+      const cuts = makeCuts(kind, targetsFor('partition'), fr);
+      if (cuts.length) {
+        faults.push({ at, type: 'partition', kind, cuts, group: g });
+        faults.push({ at: until, type: 'heal', group: g });
+      }
+    } else if (type === 'crash') {
+      const node = fr.pick(targetsFor('crash'));
+      faults.push({ at, type: 'crash', node, group: g });
+      faults.push({ at: until, type: 'restart', node, group: g });
+    } else if (type === 'pause') {
+      const node = fr.pick(targetsFor('pause'));
+      faults.push({ at, type: 'pause', node, group: g });
+      faults.push({ at: until, type: 'resume', node, group: g });
+    } else if (type === 'clock') {
+      const node = fr.pick(targetsFor('clock'));
+      const rate = fr.pick([0.25, 0.5, 2, 4]);
+      const jump = fr.chance(0.3) ? Math.round(fr.uniform(-300, 300)) : 0;
+      faults.push({ at, type: 'clock', node, rate, jump, group: g });
+      faults.push({ at: until, type: 'clock', node, rate: 1, jump: 0, group: g });
+    }
+    t += fr.uniform(0.3, 1.7) * gap;
+  }
+  faults.push({ at: ms(healAt), type: 'heal-all', group: 0 });
+  faults.sort((a, b) => a.at - b.at);
+
+  // ── event-triggered faults ──
+  // Random timing almost never lands a crash in the few milliseconds between
+  // "node votes" and "node's vote matters". So the nemesis can also strike
+  // *right after* a node emits a given event: "crash n2 just after its 3rd
+  // vote", "isolate the leader the moment it is elected".
+  const xr = R('triggers');
+  const triggers = [];
+  const triggerKinds = Object.keys(system.triggers || {});
+  const triggerTypes = types.filter((t) => t === 'crash' || t === 'pause' || t === 'partition');
+  if (opts.triggers !== false && triggerKinds.length && triggerTypes.length && (opts.triggers || !swarm || xr.chance(0.6))) {
+    const count = typeof opts.triggers === 'number' ? opts.triggers : xr.range(1, 3);
+    for (let i = 0; i < count; i++) {
+      const kind = xr.pick(triggerKinds);
+      const type = xr.pick(triggerTypes);
+      const pool = targetsFor(type === 'partition' ? 'partition' : type);
+      const self = pool.length === nodes.length && xr.chance(0.75);
+      const u = xr.float();
+      triggers.push({
+        on: { kind, node: xr.chance(0.5) ? xr.pick(nodes) : null, nth: xr.range(1, system.triggers[kind]) },
+        type,
+        target: self ? '$emitter' : xr.pick(pool),
+        recover: round(2 + 600 * u * u, 1),
+        group: ++g,
+      });
+    }
+  }
+
+  // ── workload ──
+  const wr = R('workload');
+  const nkeys = opts.keys ?? (swarm ? wr.range(1, 4) : 2);
+  const workload = {
+    keys: KEY_NAMES.slice(0, nkeys),
+    reads: round(swarm ? wr.uniform(0.2, 0.6) : 0.4),
+    cas: round(swarm ? wr.uniform(0, 0.3) : 0.15),
+    think: [0, round(swarm ? wr.uniform(5, 60) : 20, 1)],
+    opTimeout: d.opTimeout,
+  };
+
+  return {
+    everett: 1,
+    system: system.name,
+    seed,
+    nodes,
+    clients,
+    duration: ms(duration),
+    healAt: ms(healAt),
+    liveness: d.liveness,
+    network,
+    disk: { loss: diskLoss },
+    workload,
+    faults,
+    triggers,
+    bugs: [...(opts.bugs || [])],
+    params: { ...(d.params || {}), ...(opts.params || {}) },
+    swarm: { types, kinds, gap: Math.round(gap), maxLen: Math.round(maxLen), profile },
+  };
+}
+
+function makeCuts(kind, nodes, rng) {
+  const s = rng.shuffle([...nodes]);
+  const n = s.length;
+  const cuts = [];
+  const sever = (A, B) => {
+    for (const a of A) for (const b of B) cuts.push([a, b], [b, a]);
+  };
+  switch (kind) {
+    case 'halves': {
+      const k = Math.max(1, Math.floor(n / 2));
+      sever(s.slice(0, k), s.slice(k));
+      break;
+    }
+    case 'isolate':
+      sever([s[0]], s.slice(1));
+      break;
+    case 'bridge': {
+      // s[0] can talk to both sides; the two sides cannot talk to each other.
+      const rest = s.slice(1);
+      const k = Math.ceil(rest.length / 2);
+      sever(rest.slice(0, k), rest.slice(k));
+      break;
+    }
+    case 'ring':
+      // Each node hears only its two ring neighbours. Non-transitive.
+      for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j < n; j++) {
+          const dist = Math.min(j - i, n - (j - i));
+          if (dist > 1) cuts.push([s[i], s[j]], [s[j], s[i]]);
+        }
+      }
+      break;
+    case 'oneway':
+      // s[0] still hears everyone, but nobody hears s[0].
+      for (const b of s.slice(1)) cuts.push([s[0], b]);
+      break;
+  }
+  return cuts;
+}
+
+// Light structural edits used by the shrinker.
+function withoutNodes(scenario, drop) {
+  const gone = new Set(drop);
+  const keep = (id) => !gone.has(id);
+  return {
+    ...scenario,
+    nodes: scenario.nodes.filter(keep),
+    faults: scenario.faults
+      .filter((f) => !f.node || keep(f.node))
+      .map((f) => (f.cuts ? { ...f, cuts: f.cuts.filter(([a, b]) => keep(a) && keep(b)) } : f))
+      .filter((f) => !f.cuts || f.cuts.length > 0),
+    triggers: (scenario.triggers || [])
+      .filter((x) => keep(x.target) && (!x.on.node || keep(x.on.node))),
+  };
+}
+
+__exports.FAULT_TYPES = FAULT_TYPES;
+__exports.PARTITION_KINDS = PARTITION_KINDS;
+__exports.LATENCY_PROFILES = LATENCY_PROFILES;
+__exports.makeScenario = makeScenario;
+__exports.makeCuts = makeCuts;
+__exports.withoutNodes = withoutNodes;
+},
+"src/run.js": function (__exports, __require) {
+// runScenario: build a universe from a scenario, run it, judge it.
+//
+// Verdicts come from three places, cheapest first:
+//   1. monitors — invariants checked live as nodes emit events
+//      (e.g. "two leaders in one term"); the run stops at the first breach;
+//   2. liveness — after every fault is healed, the system must make progress;
+//   3. the linearizability checker over the full client history.
+
+const { World } = __require("src/world.js");
+const { Recorder } = __require("src/trace.js");
+const { History, Workload, kvGenerator } = __require("src/workload.js");
+const { checkLinearizable } = __require("src/checker/linearizability.js");
+const { fmtTime, hex32 } = __require("src/util.js");
+const { mix32, hashString } = __require("src/rng.js");
+
+function applyFault(world, f) {
+  world.recorder?.fault(f);
+  switch (f.type) {
+    case 'partition': world.partition(f.cuts); break;
+    case 'heal': world.heal(); break;
+    case 'crash': world.crash(f.node); break;
+    case 'restart': world.restart(f.node); break;
+    case 'pause': world.pause(f.node); break;
+    case 'resume': world.resume(f.node); break;
+    case 'clock': world.setClock(f.node, f.rate, f.jump || 0); break;
+    case 'heal-all':
+      world.heal();
+      world.calmNetwork();
+      for (const id of world.nodeIds) {
+        world.resume(id);
+        world.restart(id);
+        const a = world.actors.get(id);
+        if (a.clock.rate !== 1) world.setClock(id, 1, 0);
+      }
+      break;
+    default:
+      throw new Error(`unknown fault type "${f.type}"`);
+  }
+}
+
+// Arm the event-triggered faults: each watches the emit stream, counts
+// matching events, and strikes once — right after its nth match.
+function armTriggers(world, scenario) {
+  for (const tr of scenario.triggers || []) {
+    let count = 0;
+    let fired = false;
+    world.hooks.push((e) => {
+      if (fired || e.kind !== tr.on.kind || (tr.on.node && e.node !== tr.on.node)) return;
+      if (++count !== tr.on.nth) return;
+      fired = true;
+      if (world.now >= scenario.healAt) return;
+      const node = tr.target === '$emitter' ? e.node : tr.target;
+      if (!world.actors.has(node) || world.actors.get(node).kind !== 'node') return;
+      const cause = { kind: e.kind, node: e.node, nth: tr.on.nth, data: e.data };
+      const until = Math.min(world.now + Math.round(tr.recover * 1000), scenario.healAt);
+      let start, stop;
+      if (tr.type === 'crash') { start = { type: 'crash', node }; stop = { type: 'restart', node }; }
+      else if (tr.type === 'pause') { start = { type: 'pause', node }; stop = { type: 'resume', node }; }
+      else {
+        const cuts = [];
+        for (const other of world.nodeIds) if (other !== node) cuts.push([node, other], [other, node]);
+        start = { type: 'partition', kind: 'isolate', cuts };
+        stop = { type: 'heal' };
+      }
+      world.at(world.now, () => applyFault(world, { ...start, trigger: cause, group: tr.group }));
+      world.at(until, () => applyFault(world, { ...stop, group: tr.group }));
+    });
+  }
+}
+
+const EPOCH = Date.UTC(2030, 0, 1);
+
+function runScenario(system, scenario, { record = false, snapshots = true, maxEvents, guard = true } = {}) {
+  const recorder = record ? new Recorder({ snapshots }) : null;
+  const world = new World({
+    seed: scenario.seed,
+    network: scenario.network,
+    diskLoss: scenario.disk?.loss,
+    recorder,
+    maxEvents,
+  });
+  const opts = {
+    bugs: new Set(scenario.bugs || []),
+    params: scenario.params || {},
+    scenario,
+  };
+  for (const id of scenario.nodes) world.addNode(id, (ctx) => system.createNode(ctx, opts));
+  for (const id of scenario.clients) world.addClient(id, (ctx) => system.createClient(ctx, opts));
+  world.monitors = system.monitors ? system.monitors(opts) : [];
+  const history = new History();
+
+  // Determinism guard: while the universe runs, Math.random and Date.now are
+  // the universe's, not the host's. Code that reaches for them by accident
+  // stays reproducible instead of silently breaking replay.
+  const realRandom = Math.random, realNow = Date.now;
+  if (guard) {
+    Math.random = () => (world.current ? world.current.rng.float() : world.rng.float());
+    Date.now = () => EPOCH + Math.floor((world.current ? world.localTime(world.current) : world.now) / 1000);
+  }
+  try {
+    world.start();
+    for (const f of scenario.faults) world.at(f.at, () => applyFault(world, f));
+    armTriggers(world, scenario);
+    if (scenario.clients.length > 0) {
+      const w = scenario.workload || {};
+      const generator = system.workload ? system.workload(w, opts) : kvGenerator(w);
+      new Workload(world, history, {
+        generator,
+        think: w.think,
+        stopAt: scenario.duration - 50_000,
+        start: 50_000,
+      }).start();
+    }
+    world.runUntil(scenario.duration);
+  } finally {
+    if (guard) { Math.random = realRandom; Date.now = realNow; }
+  }
+  history.finalize();
+
+  if (!world.violation) {
+    for (const m of world.monitors) {
+      if (!m.onEnd) continue;
+      const v = m.onEnd(world);
+      if (v) { world.monitorFail(m, v); break; }
+    }
+  }
+
+  if (!world.violation && scenario.liveness && scenario.clients.length > 0) {
+    const deadline = scenario.healAt + scenario.liveness * 1000;
+    if (deadline < scenario.duration) {
+      const recovered = history.ops.some((o) => o.type === 'ok' && o.complete >= scenario.healAt && o.complete <= deadline);
+      if (!recovered) {
+        world.violation = {
+          signature: 'liveness',
+          message: `no client operation succeeded within ${scenario.liveness}ms after every fault was healed at ${fmtTime(scenario.healAt)}`,
+          time: deadline,
+        };
+      }
+    }
+  }
+
+  let lin = null;
+  if (!world.violation && system.model) {
+    lin = checkLinearizable(history.ops, system.model);
+    if (!lin.ok) {
+      const c = lin.culprit;
+      world.violation = {
+        signature: 'linearizability',
+        message: system.model.explain ? system.model.explain(lin) : `history is not linearizable (key ${lin.key})`,
+        time: c ? (c.type === 'ok' ? c.complete : c.invoke) : world.now,
+        key: lin.key,
+        culprit: c ? c.id : null,
+        involved: lin.ops.map((o) => o.id),
+        linearized: lin.linearized,
+      };
+    }
+  }
+
+  // Fold the history into the fingerprint: same universe ⇒ same hash.
+  let fp = world.fp1 ^ world.fp2;
+  for (const o of history.ops) {
+    fp = mix32(fp ^ hashString(`${o.process}|${o.f}|${o.key}|${JSON.stringify(o.value)}|${o.type}|${JSON.stringify(o.output)}|${o.invoke}|${o.complete}`));
+  }
+
+  const ops = history.ops;
+  const result = {
+    ok: !world.violation,
+    violation: world.violation,
+    fingerprint: world.fingerprint + hex32(fp),
+    stats: {
+      ...world.stats,
+      ops: ops.length,
+      okOps: ops.filter((o) => o.type === 'ok').length,
+      infoOps: ops.filter((o) => o.type === 'info').length,
+      faults: scenario.faults.length + (scenario.triggers || []).length,
+      linSteps: lin ? lin.steps : 0,
+      linUnknown: lin ? !!lin.unknown : false,
+    },
+  };
+  if (record) {
+    result.trace = {
+      ...recorder.toJSON(),
+      history: ops,
+      violation: world.violation,
+      scenario,
+      fingerprint: result.fingerprint,
+    };
+  }
+  return result;
+}
+
+__exports.applyFault = applyFault;
+__exports.runScenario = runScenario;
+},
+"src/checker/linearizability.js": function (__exports, __require) {
+// Linearizability checking — Wing & Gong's search with Lowe's memoization,
+// the same algorithm behind Porcupine and Knossos.
+//
+// A history is linearizable if every operation can be assigned a single
+// instant, between its invocation and its completion, such that replaying the
+// operations in that order through a sequential model reproduces every
+// observed output. Operations with unknown outcomes ("info") get an infinite
+// completion time: they may take effect at any point after they began, or
+// never. Histories are split per key first (P-compositionality), which turns
+// an exponential search into many small ones.
+
+function checkLinearizable(ops, model, { budget = 5_000_000 } = {}) {
+  const parts = new Map();
+  for (const op of ops) {
+    if (op.type === 'fail') continue; // definitely did not happen
+    if (op.type === 'info' && model.readOnly(op)) continue; // no effect, no output
+    const k = model.partition(op);
+    if (!parts.has(k)) parts.set(k, []);
+    parts.get(k).push(op);
+  }
+  let steps = 0;
+  let unknown = false;
+  for (const [key, list] of parts) {
+    const r = checkPartition(list, model, budget - steps);
+    steps += r.steps;
+    if (r.unknown) { unknown = true; continue; }
+    if (!r.ok) return { ok: false, key, steps, ...r };
+  }
+  return { ok: true, unknown, steps };
+}
+
+const CALL = 0, RET = 1;
+
+function checkPartition(ops, model, budget) {
+  const n = ops.length;
+  const calls = new Array(n);
+  const entries = [];
+  for (let i = 0; i < n; i++) {
+    const op = ops[i];
+    const ret = op.type === 'ok' ? op.complete : Infinity;
+    const c = { kind: CALL, time: op.invoke, i, op, prev: null, next: null, match: null };
+    const r = { kind: RET, time: ret, i, op, prev: null, next: null, match: null };
+    c.match = r;
+    calls[i] = c;
+    entries.push(c, r);
+  }
+  // At equal timestamps calls sort before returns, so touching operations
+  // count as concurrent — the conservative reading.
+  entries.sort((a, b) => (a.time - b.time) || (a.kind - b.kind) || (a.i - b.i));
+
+  const head = { prev: null, next: null };
+  let prev = head;
+  for (const e of entries) { e.prev = prev; prev.next = e; prev = e; }
+
+  const lift = (e) => {
+    e.prev.next = e.next;
+    e.next.prev = e.prev;
+    const m = e.match;
+    m.prev.next = m.next;
+    if (m.next) m.next.prev = m.prev;
+  };
+  const unlift = (e) => {
+    const m = e.match;
+    m.prev.next = m;
+    if (m.next) m.next.prev = m;
+    e.prev.next = e;
+    e.next.prev = e;
+  };
+
+  const words = Math.max(1, Math.ceil(n / 32));
+  const bits = new Uint32Array(words);
+  const flip = (i) => { bits[i >>> 5] ^= 1 << (i & 31); };
+  const bitsKey = () => {
+    let s = '';
+    for (let w = 0; w < words; w++) s += bits[w].toString(36) + ',';
+    return s;
+  };
+
+  const cache = new Set();
+  const stack = [];
+  let state = model.init();
+  let entry = head.next;
+  let steps = 0;
+  let best = { depth: -1, op: null, order: [] };
+
+  while (head.next !== null) {
+    if (++steps > budget) return { ok: true, unknown: true, steps };
+    if (entry.kind === CALL) {
+      const [ok, next] = model.step(state, entry.op);
+      if (ok) {
+        flip(entry.i);
+        const key = bitsKey() + model.hash(next);
+        if (!cache.has(key)) {
+          cache.add(key);
+          stack.push(entry, state);
+          state = next;
+          lift(entry);
+          entry = head.next;
+          continue;
+        }
+        flip(entry.i);
+      }
+      entry = entry.next;
+    } else {
+      // We reached the completion of an operation we could not place before
+      // it: this branch is dead. Remember the deepest dead end — the op stuck
+      // there is the best explanation of what went wrong.
+      const depth = stack.length >> 1;
+      if (depth > best.depth) {
+        const order = [];
+        for (let s = 0; s < stack.length; s += 2) order.push(stack[s].op.id);
+        best = { depth, op: entry.op, order };
+      }
+      if (stack.length === 0) {
+        return { ok: false, steps, culprit: best.op, linearized: best.order, ops };
+      }
+      const s = stack.pop();
+      const e = stack.pop();
+      state = s;
+      flip(e.i);
+      unlift(e);
+      entry = e.next;
+    }
+  }
+  return { ok: true, steps };
+}
+
+__exports.checkLinearizable = checkLinearizable;
+},
+"src/shrink.js": function (__exports, __require) {
+// The shrinker: from "this universe broke" to "this is why".
+//
+// A failing universe typically contains dozens of faults and hundreds of
+// operations, nearly all of them irrelevant. Shrinking happens in two moves:
+//
+//   * Structural: propose a simpler universe — shorter, fewer faults (delta
+//     debugging over fault groups), fewer nodes and clients, calmer network —
+//     and keep any proposal that still fails *the same way* (same violation
+//     signature). Runs are deterministic, so every proposal is a fair test.
+//
+//   * Resampling: removing an early fault perturbs everything after it (the
+//     butterfly effect), so structural shrinking can get stuck. When it does,
+//     we generate fresh universes from the *same recipe, made smaller* — only
+//     the fault types still present, fewer of them, a shorter run — and
+//     structurally shrink any that fail the same way. The smallest wins.
+
+const { runScenario } = __require("src/run.js");
+const { makeScenario, withoutNodes } = __require("src/scenario.js");
+const { hash32 } = __require("src/rng.js");
+
+function scenarioSize(s, result) {
+  return {
+    faults: s.faults.filter((f) => f.type !== 'heal-all').length + (s.triggers || []).length,
+    nodes: s.nodes.length,
+    clients: s.clients.length,
+    duration: s.duration,
+    ops: result ? result.stats.ops : undefined,
+  };
+}
+
+// Lower is simpler: faults dominate, then how much story there is to read.
+function complexity(size) {
+  return size.faults * 100 + (size.ops || 0) + size.duration / 100_000 + size.nodes * 5 + size.clients * 5;
+}
+
+function shrink(system, scenario, baseline, { maxRuns = 600, resample = true, onStep } = {}) {
+  if (!baseline || baseline.ok) throw new Error('shrink() needs a failing baseline result');
+  const budget = { runs: 0, max: maxRuns };
+  const first = structural(system, scenario, baseline, budget, onStep);
+  let best = first;
+  if (resample) {
+    for (let round = 0; round < 4 && budget.runs < budget.max; round++) {
+      const found = resampleSmaller(system, best, budget, round, onStep);
+      if (!found) break;
+      const s = structural(system, found.scenario, found.result, budget, onStep);
+      if (complexity(s.to) < complexity(best.to)) best = { ...s, steps: [...best.steps, `resampled universe ${found.scenario.seed}`, ...s.steps] };
+      else break;
+    }
+  }
+  return {
+    scenario: best.scenario,
+    result: best.result,
+    runs: budget.runs,
+    steps: best.steps,
+    from: scenarioSize(scenario, baseline),
+    to: best.to,
+  };
+}
+
+// Draw fresh universes from a smaller version of the failing universe's
+// recipe. Returns the first that fails the same way and is already simpler.
+function resampleSmaller(system, best, budget, round, onStep) {
+  const s = best.scenario;
+  const sig = best.result.violation.signature;
+  const types = new Set();
+  for (const f of s.faults) {
+    if (f.type === 'partition' || f.type === 'heal') types.add('partition');
+    else if (f.type === 'crash' || f.type === 'restart') types.add('crash');
+    else if (f.type === 'pause' || f.type === 'resume') types.add('pause');
+    else if (f.type === 'clock') types.add('clock');
+  }
+  for (const t of s.triggers || []) types.add(t.type);
+  const target = complexity(best.to);
+  const attempts = Math.min(120, budget.max - budget.runs);
+  const durationMs = Math.max(400, s.duration / 1000);
+  for (let i = 0; i < attempts; i++) {
+    const seed = hash32(s.seed, 'resample', round, i);
+    // Sweep from "a few faults" to "barely any".
+    const want = Math.max(1, Math.round((best.to.faults / 2) * (1 - i / attempts)));
+    const cand = makeScenario(system, seed, {
+      bugs: s.bugs,
+      params: s.params,
+      nodes: s.nodes.length,
+      clients: Math.max(1, s.clients.length),
+      duration: durationMs,
+      quiesce: 0,
+      faults: [...types],
+      gap: durationMs / (want + 1),
+      triggers: (s.triggers || []).length ? Math.min(want, (s.triggers || []).length) : false,
+    });
+    if (s.clients.length === 0) cand.clients = [];
+    budget.runs++;
+    const r = runScenario(system, cand);
+    const hit = !r.ok && r.violation.signature === sig && complexity(scenarioSize(cand, r)) < target;
+    onStep?.({ label: 'resample', accepted: hit, runs: budget.runs, size: best.to });
+    if (hit) return { scenario: cand, result: r };
+  }
+  return null;
+}
+
+function structural(system, scenario, baseline, budget, onStep) {
+  const sig = baseline.violation.signature;
+  let best = scenario;
+  let bestResult = baseline;
+  const maxRuns = budget.max;
+  const steps = [];
+
+  const attempt = (label, candidate) => {
+    if (budget.runs >= maxRuns || !candidate) return false;
+    budget.runs++;
+    const r = runScenario(system, candidate);
+    const ok = !r.ok && r.violation.signature === sig;
+    if (ok) {
+      best = candidate;
+      bestResult = r;
+      steps.push(label);
+    }
+    onStep?.({ label, accepted: ok, runs: budget.runs, size: scenarioSize(best, bestResult) });
+    return ok;
+  };
+
+  let progress = true;
+  while (progress && budget.runs < maxRuns) {
+    progress = false;
+
+    // 1. End the universe shortly after the violation.
+    if (sig !== 'liveness') {
+      const cut = Math.ceil((bestResult.violation.time + 60_000) / 1000) * 1000;
+      if (cut < best.duration) progress = attempt(`end at ${cut / 1e6}s`, truncate(best, cut)) || progress;
+    }
+
+    // 2. Drop event-triggered faults one at a time.
+    for (let i = (best.triggers || []).length - 1; i >= 0; i--) {
+      const triggers = best.triggers.filter((_, j) => j !== i);
+      if (attempt('remove trigger', { ...best, triggers })) progress = true;
+    }
+
+    // 3. Delta-debug the timed fault groups.
+    if (ddminGroups(best, (cand) => attempt('remove faults', cand))) progress = true;
+
+    // 4. Fewer nodes: drop pairs, keeping the cluster odd-sized.
+    while (best.nodes.length > 3) {
+      let shrunk = false;
+      const ns = best.nodes;
+      outer: for (let i = ns.length - 1; i >= 0; i--) {
+        for (let j = i - 1; j >= 0; j--) {
+          if (attempt(`${ns.length - 2} nodes`, withoutNodes(best, [ns[i], ns[j]]))) { shrunk = true; break outer; }
+          if (budget.runs >= maxRuns) break outer;
+        }
+      }
+      if (!shrunk) break;
+      progress = true;
+    }
+
+    // 5. Fewer clients.
+    for (let k = 1; k < best.clients.length; k++) {
+      if (attempt(`${k} client${k > 1 ? 's' : ''}`, { ...best, clients: best.clients.slice(0, k) })) { progress = true; break; }
+    }
+
+    // 6. Calmer network.
+    const net = best.network;
+    if (net.drop > 0 && attempt('no packet loss', { ...best, network: { ...net, drop: 0 } })) progress = true;
+    if (best.network.dup > 0 && attempt('no duplication', { ...best, network: { ...best.network, dup: 0 } })) progress = true;
+    if (best.network.latency.tail > 0 &&
+      attempt('no latency spikes', { ...best, network: { ...best.network, latency: { ...best.network.latency, tail: 0 } } })) progress = true;
+
+    // 7. Only the key that broke.
+    const key = bestResult.violation.key;
+    const keys = best.workload?.keys || [];
+    if (key && keys.length > 1 && attempt(`only key ${key}`, { ...best, workload: { ...best.workload, keys: [key] } })) progress = true;
+    else if (!key && keys.length > 1 && attempt('one key', { ...best, workload: { ...best.workload, keys: keys.slice(0, 1) } })) progress = true;
+  }
+
+  return { scenario: best, result: bestResult, steps, to: scenarioSize(best, bestResult) };
+}
+
+function truncate(s, end) {
+  const healAt = Math.min(s.healAt, end);
+  return {
+    ...s,
+    duration: end,
+    healAt,
+    faults: s.faults
+      .filter((f) => f.at < end && f.type !== 'heal-all')
+      .concat(s.healAt < end ? s.faults.filter((f) => f.type === 'heal-all') : []),
+  };
+}
+
+// Zeller's ddmin over fault groups: try removing big chunks first, then
+// smaller ones, keeping whatever removal still reproduces the failure.
+function ddminGroups(scenario, test) {
+  const groupsOf = (s) => [...new Set(s.faults.filter((f) => f.group > 0).map((f) => f.group))];
+  let current = scenario;
+  let groups = groupsOf(current);
+  let n = 2;
+  let changed = false;
+  while (groups.length > 0) {
+    const size = Math.ceil(groups.length / n);
+    let reduced = false;
+    for (let i = 0; i < groups.length; i += size) {
+      const drop = new Set(groups.slice(i, i + size));
+      const cand = { ...current, faults: current.faults.filter((f) => !drop.has(f.group)) };
+      if (test(cand)) {
+        current = cand;
+        groups = groupsOf(current);
+        n = Math.max(n - 1, 2);
+        reduced = changed = true;
+        break;
+      }
+    }
+    if (!reduced) {
+      if (size <= 1) break;
+      n = Math.min(n * 2, groups.length);
+    }
+  }
+  return changed;
+}
+
+__exports.scenarioSize = scenarioSize;
+__exports.complexity = complexity;
+__exports.shrink = shrink;
+},
+"src/explore.js": function (__exports, __require) {
+// The multiverse explorer: run universe after universe until one breaks.
+//
+// exploreSync is for scripts and tests; exploreAsync yields to the event loop
+// so a browser tab stays responsive while it searches. For many cores, see
+// src/node/parallel.js.
+
+const { makeScenario } = __require("src/scenario.js");
+const { runScenario } = __require("src/run.js");
+const { shrink } = __require("src/shrink.js");
+
+const clock = () => (globalThis.performance ? performance.now() : Date.now());
+
+function exploreSync(system, { seeds = 1000, start = 1, bugs = [], overrides = {}, stopOnFirst = true, onUniverse } = {}) {
+  const t0 = clock();
+  const failures = [];
+  let explored = 0;
+  for (let i = 0; i < seeds; i++) {
+    const seed = start + i;
+    const scenario = makeScenario(system, seed, { ...overrides, bugs });
+    const result = runScenario(system, scenario);
+    explored++;
+    onUniverse?.({ seed, result, explored });
+    if (!result.ok) {
+      failures.push({ seed, scenario, result });
+      if (stopOnFirst) break;
+    }
+  }
+  return { explored, failures, elapsed: clock() - t0 };
+}
+
+async function exploreAsync(system, {
+  seeds = 1000, start = 1, bugs = [], overrides = {}, stopOnFirst = true,
+  onUniverse, shouldStop, sliceMs = 24,
+} = {}) {
+  const t0 = clock();
+  const failures = [];
+  let explored = 0;
+  let sliceStart = clock();
+  for (let i = 0; i < seeds; i++) {
+    if (shouldStop?.()) break;
+    const seed = start + i;
+    const scenario = makeScenario(system, seed, { ...overrides, bugs });
+    const result = runScenario(system, scenario);
+    explored++;
+    onUniverse?.({ seed, result, explored });
+    if (!result.ok) {
+      failures.push({ seed, scenario, result });
+      if (stopOnFirst) break;
+    }
+    if (clock() - sliceStart > sliceMs) {
+      await new Promise((r) => setTimeout(r, 0));
+      sliceStart = clock();
+    }
+  }
+  return { explored, failures, elapsed: clock() - t0 };
+}
+
+// Shrink a failure and re-run the minimal universe with full recording.
+function investigate(system, failure, { maxRuns = 500, onStep } = {}) {
+  const shrunk = shrink(system, failure.scenario, failure.result, { maxRuns, onStep });
+  const replay = runScenario(system, shrunk.scenario, { record: true });
+  const deterministic = replay.fingerprint === shrunk.result.fingerprint;
+  return { ...shrunk, trace: replay.trace, fingerprint: replay.fingerprint, deterministic };
+}
+
+__exports.exploreSync = exploreSync;
+__exports.exploreAsync = exploreAsync;
+__exports.investigate = investigate;
+},
+"src/narrate.js": function (__exports, __require) {
+// Narration: turn a recorded universe into a story a human can read in ten
+// seconds. Faults, elections, the operations that matter, and the violation.
+
+const { components } = __require("src/util.js");
+
+function describeEvent(system, e) {
+  const text = system.describe ? system.describe(e) : null;
+  return text ? `${e.node} ${text}` : `${e.node} ${e.kind}`;
+}
+
+function describeFault(f, nodes, system) {
+  const why = f.trigger ? ` — the instant after ${describeEvent(system || {}, f.trigger)}` : '';
+  switch (f.type) {
+    case 'partition': {
+      if (f.kind === 'oneway') {
+        const mute = f.cuts[0][0];
+        return `network fault: ${mute} goes mute — it hears everyone, nobody hears it${why}`;
+      }
+      const groups = components(nodes, f.cuts);
+      if (groups.length > 1) {
+        return `network partition (${f.kind}): ${groups.map((g) => `{${g.join(' ')}}`).join(' ⟂ ')}${why}`;
+      }
+      if (f.kind === 'bridge') {
+        const counts = new Map(nodes.map((n) => [n, 0]));
+        for (const [a] of f.cuts) counts.set(a, counts.get(a) + 1);
+        const bridge = nodes.find((n) => counts.get(n) === 0);
+        return `bridge partition: only ${bridge} can see both sides${why}`;
+      }
+      return `${f.kind} partition: ${f.cuts.length / 2} links severed, every node sees only its neighbours${why}`;
+    }
+    case 'heal': return 'network heals';
+    case 'crash': return `${f.node} crashes${why}`;
+    case 'restart': return `${f.node} restarts, recovering from its disk`;
+    case 'pause': return `${f.node} freezes (stop-the-world pause)${why}`;
+    case 'resume': return `${f.node} wakes up, unaware that time has passed`;
+    case 'clock':
+      if (f.rate === 1) return `${f.node}'s clock is corrected`;
+      return `${f.node}'s clock starts running ${f.rate}× ${f.rate > 1 ? 'fast' : 'slow'}` +
+        (f.jump ? ` and jumps ${f.jump > 0 ? '+' : ''}${f.jump}ms` : '');
+    case 'heal-all': return 'all faults heal: network restored, frozen nodes resume, crashed nodes restart';
+  }
+  return f.type;
+}
+
+// Returns [{ t, kind, text, node?, op? }], sorted by time.
+function narrate(system, trace, { maxLines = 40 } = {}) {
+  const lines = [];
+  const nodes = trace.nodes;
+  for (const f of trace.faults) {
+    lines.push({ t: f.t, kind: 'fault', text: describeFault(f, nodes, system), fault: f, prio: 3 });
+  }
+  for (const e of trace.emits) {
+    const text = system.describe ? system.describe(e) : null;
+    if (!text) continue;
+    const prio = e.kind === 'vote' || e.kind === 'candidate' ? 0 : 2;
+    lines.push({ t: e.t, kind: 'event', node: e.node, text: `${e.node} ${text}`, prio });
+  }
+  const v = trace.violation;
+  if (v && v.involved && system.model) {
+    const involved = new Set(v.involved);
+    const culpritOp = trace.history.find((o) => o.id === v.culprit);
+    // Writes that matter: the last few acknowledged before the culprit began.
+    const writes = trace.history.filter((o) => involved.has(o.id) && o.type === 'ok' && o.f !== 'get' &&
+      (o.f !== 'cas' || o.output === true) && (!culpritOp || o.complete <= culpritOp.complete));
+    writes.sort((a, b) => a.complete - b.complete);
+    const keep = new Set(writes.slice(-3).map((o) => o.id));
+    if (culpritOp) keep.add(culpritOp.id);
+    for (const op of trace.history) {
+      if (!keep.has(op.id)) continue;
+      const culprit = op.id === v.culprit;
+      lines.push({
+        t: op.complete,
+        kind: culprit ? 'culprit' : 'op',
+        op: op.id,
+        text: `${op.client} ${system.model.describe(op)}` + (culprit ? '   ← impossible' : ''),
+        prio: culprit ? 4 : 1,
+      });
+    }
+  }
+  if (v) lines.push({ t: v.time, kind: 'violation', text: v.message, prio: 5 });
+  lines.sort((a, b) => a.t - b.t || a.prio - b.prio);
+
+  // Too long? Drop the least important lines first, but keep the ending.
+  let out = lines;
+  for (let p = 0; out.length > maxLines && p <= 2; p++) {
+    const cutoff = out.length > maxLines ? out[Math.max(0, out.length - 12)].t : Infinity;
+    out = out.filter((l) => l.prio > p || l.t >= cutoff);
+  }
+  if (out.length > maxLines) out = out.slice(out.length - maxLines);
+  return out;
+}
+
+__exports.describeEvent = describeEvent;
+__exports.describeFault = describeFault;
+__exports.narrate = narrate;
+},
+"src/checker/models.js": function (__exports, __require) {
+// Sequential specifications for the linearizability checker.
+//
+// A model is { init, step(state, op) -> [ok, nextState], hash, partition,
+// readOnly, describe, explain }. step() receives the *completed* operation, so
+// it can check observed outputs against what the sequential object would say.
+
+const { deepEqual, fmtTime } = __require("src/util.js");
+
+const show = (v) => (v === null || v === undefined ? 'nil' : JSON.stringify(v));
+
+// A map of independent read/write/compare-and-set registers.
+const kvModel = {
+  name: 'kv-register',
+  partition: (op) => op.key,
+  readOnly: (op) => op.f === 'get',
+  init: () => null,
+  hash: (s) => (s === null ? '∅' : JSON.stringify(s)),
+
+  step(state, op) {
+    switch (op.f) {
+      case 'get':
+        return [op.type !== 'ok' || deepEqual(op.output ?? null, state), state];
+      case 'put':
+        return [true, op.value];
+      case 'cas': {
+        const [from, to] = op.value;
+        if (op.type === 'ok') {
+          return op.output === true ? [deepEqual(state, from), to] : [!deepEqual(state, from), state];
+        }
+        return [true, deepEqual(state, from) ? to : state];
+      }
+      default:
+        throw new Error(`kv model: unknown op ${op.f}`);
+    }
+  },
+
+  describe(op) {
+    const res = op.type === 'ok' ? '' : op.type === 'info' ? ' ?' : ' ✗';
+    switch (op.f) {
+      case 'get': return `get ${op.key}` + (op.type === 'ok' ? ` → ${show(op.output)}` : res);
+      case 'put': return `put ${op.key}=${show(op.value)}${res}`;
+      case 'cas': return `cas ${op.key} ${show(op.value[0])}→${show(op.value[1])}` +
+        (op.type === 'ok' ? (op.output ? ' ✓' : ' ✗') : res);
+    }
+    return `${op.f} ${op.key}`;
+  },
+
+  // Turn "no valid linearization" into a sentence a human can act on.
+  explain(result) {
+    const { culprit: c, ops, key } = result;
+    if (!c) return `no valid ordering of operations on key "${key}"`;
+    const who = `${c.client} ${kvModel.describe(c)}`;
+    const writes = ops.filter((o) =>
+      o.type === 'ok' && (o.f === 'put' || (o.f === 'cas' && o.output === true)));
+    const wrote = (o) => (o.f === 'put' ? o.value : o.value[1]);
+    if (c.f === 'get' && c.type === 'ok') {
+      const v = c.output ?? null;
+      if (v === null) {
+        const w = writes.find((o) => o.complete < c.invoke);
+        if (w) return `${who} at ${fmtTime(c.complete)} — but ${w.client} had already written ${show(wrote(w))} ` +
+          `(acknowledged at ${fmtTime(w.complete)}). An acknowledged write vanished.`;
+      }
+      const src = ops.find((o) => (o.f === 'put' && deepEqual(o.value, v)) || (o.f === 'cas' && deepEqual(o.value[1], v)));
+      if (!src && v !== null) return `${who} — but no operation ever wrote ${show(v)}. A phantom value.`;
+      if (src) {
+        const newer = writes.find((o) => o !== src && src.complete !== null && o.invoke > src.complete && o.complete < c.invoke);
+        if (newer) {
+          return `${who} at ${fmtTime(c.complete)} — a stale read: ${newer.client} overwrote it with ` +
+            `${show(wrote(newer))}, acknowledged at ${fmtTime(newer.complete)}, before this read even began.`;
+        }
+      }
+      return `${who} — no ordering of the concurrent writes can produce that value at that moment.`;
+    }
+    if (c.f === 'cas' && c.type === 'ok') {
+      return c.output
+        ? `${who} — but the register never held ${show(c.value[0])} at any moment inside this operation's window.`
+        : `${who} — but the register held ${show(c.value[0])} throughout this operation's window, so the CAS should have succeeded.`;
+    }
+    return `${who} cannot be placed anywhere in its window consistently with the other operations.`;
+  },
+};
+
+const models = { kv: kvModel };
+
+__exports.kvModel = kvModel;
+__exports.models = models;
+},
+"examples/raft/index.js": function (__exports, __require) {
+// The Raft key-value store, packaged as an Everett system.
+
+const { RaftNode, BUGS } = __require("examples/raft/raft.js");
+const { RaftClient } = __require("examples/raft/client.js");
+const { raftSafety } = __require("examples/raft/monitor.js");
+const { kvModel } = __require("src/checker/models.js");
+const { kvGenerator } = __require("src/workload.js");
+
+const system = {
+  name: 'raft',
+  title: 'Raft KV store',
+  summary: 'A 3- or 5-node Raft cluster replicating a linearizable key-value store.',
+  defaults: {
+    nodes: [3, 5],
+    clients: [2, 4],
+    duration: 8000,
+    quiesce: 3000,
+    liveness: 2500,
+    opTimeout: 1000,
+  },
+  faults: ['partition', 'crash', 'pause', 'clock'],
+  // Events the nemesis may strike right after: "crash n2 just after it votes".
+  triggers: { vote: 4, leader: 4, candidate: 6, apply: 60 },
+  bugs: BUGS,
+  createNode: (ctx, opts) => new RaftNode(ctx, opts),
+  createClient: (ctx, opts) => new RaftClient(ctx, opts),
+  workload: (w) => kvGenerator(w),
+  model: kvModel,
+  monitors: () => [raftSafety()],
+
+  // One-line narration of the events that matter, for the story view.
+  describe(e) {
+    switch (e.kind) {
+      case 'leader': return `becomes leader of term ${e.data.term}`;
+      case 'vote': return `votes for ${e.data.for} in term ${e.data.term}`;
+      case 'stepdown': return `steps down (term ${e.data.term})`;
+      case 'truncate': return `truncates its log from index ${e.data.from}`;
+      default: return null;
+    }
+  },
+
+  // Colours for message types in the debugger.
+  messageColors: {
+    RequestVote: 'violet',
+    RequestVoteReply: 'violet',
+    AppendEntries: 'blue',
+    AppendEntriesReply: 'teal',
+    ClientRequest: 'orange',
+    ClientResponse: 'orange',
+  },
+};
+
+
+__exports.system = system;
+},
+"examples/raft/raft.js": function (__exports, __require) {
+// A Raft cluster replicating a key-value store.
+//
+// This is a straightforward, by-the-paper implementation (Ongaro & Ousterhout,
+// "In Search of an Understandable Consensus Algorithm", 2014): leader election
+// with randomized timeouts, log replication with fast backtracking, commit
+// only of current-term entries, persistence with fsync before every
+// acknowledgement, no-op on election, linearizable reads through the log, and
+// client sessions for exactly-once application.
+//
+// Each `bug(...)` check below is a deliberate, switchable mistake — every one
+// of them a bug that has shipped in a real consensus implementation.
+
+const BUGS = {
+  'stale-reads':
+    'Leader answers reads from local state without confirming it is still leader. A deposed leader on the wrong side of a partition serves stale data.',
+  'ack-before-commit':
+    'Leader acknowledges writes as soon as they hit its own log, before a majority has them. Acknowledged writes vanish when it is deposed.',
+  'forget-vote':
+    'votedFor is kept in memory only. A node that crashes and restarts can vote twice in one term, electing two leaders.',
+  'vote-any-log':
+    'Voters skip the election restriction (candidate log must be at least as up-to-date). A node missing committed entries can win and erase them.',
+  'truncate-on-match':
+    'Followers truncate their log after prevLogIndex even when entries match. A delayed, stale AppendEntries silently deletes acknowledged entries.',
+  'lazy-fsync':
+    'Log appends are acknowledged before fsync; the disk is flushed on a timer instead ("group commit"). A crash loses entries the leader counted as replicated.',
+  'figure-8':
+    'Leader commits entries from earlier terms by counting replicas, without first committing an entry of its own term — Figure 8 of the Raft paper. A "committed" entry can be overwritten.',
+};
+
+const NOOP = 'noop';
+
+class RaftNode {
+  constructor(ctx, { bugs = new Set(), params = {} } = {}) {
+    this.ctx = ctx;
+    this.bugs = bugs;
+    this.cfg = {
+      electionMin: 150,
+      electionMax: 300,
+      heartbeat: 50,
+      batch: 64,
+      ...(params.raft || {}),
+    };
+  }
+
+  bug(name) { return this.bugs.has(name); }
+
+  // ── lifecycle ──────────────────────────────────────────────────────────────
+
+  onStart() {
+    const d = this.ctx.disk;
+    this.currentTerm = d.get('term') ?? 0;
+    this.votedFor = d.get('vote') ?? null;
+    this.log = [{ term: 0, cmd: { f: NOOP, id: 'genesis' } }];
+    const len = d.get('len') ?? 0;
+    for (let i = 1; i <= len; i++) {
+      const e = d.get('log/' + i);
+      if (!e) break; // torn tail after a crash: everything past here was never acknowledged
+      this.log.push(e);
+    }
+    this.commitIndex = 0;
+    this.lastApplied = 0;
+    this.kv = new Map();
+    this.sessions = new Map(); // client -> { opId, result }
+    this.role = 'follower';
+    this.leaderId = null;
+    this.votes = null;
+    this.nextIndex = null;
+    this.matchIndex = null;
+    this.pending = new Map(); // log index -> { client, reqId, term }
+    this.electionTimer = null;
+    this.heartbeatTimer = null;
+    this.flushTimer = null;
+    this.resetElectionTimer();
+    if (this.bug('lazy-fsync')) this.scheduleFlush();
+  }
+
+  get lastIndex() { return this.log.length - 1; }
+  get lastTerm() { return this.log[this.log.length - 1].term; }
+  get majority() { return Math.floor(this.ctx.nodes.length / 2) + 1; }
+
+  // ── persistence ────────────────────────────────────────────────────────────
+
+  setTerm(term) {
+    this.currentTerm = term;
+    this.votedFor = null;
+    this.ctx.disk.set('term', term);
+    this.ctx.disk.set('vote', null);
+    this.ctx.disk.fsync();
+  }
+
+  setVote(id) {
+    this.votedFor = id;
+    if (this.bug('forget-vote')) return;
+    this.ctx.disk.set('vote', id);
+    this.ctx.disk.fsync();
+  }
+
+  truncateFrom(index) {
+    this.ctx.emit('truncate', { from: index, last: this.lastIndex, commit: this.commitIndex });
+    this.log.length = index;
+    this.ctx.disk.set('len', index - 1);
+  }
+
+  appendToLog(entries) {
+    const d = this.ctx.disk;
+    for (const e of entries) {
+      this.log.push(e);
+      d.set('log/' + this.lastIndex, e);
+    }
+    d.set('len', this.lastIndex);
+  }
+
+  syncLog() {
+    if (!this.bug('lazy-fsync')) this.ctx.disk.fsync();
+  }
+
+  scheduleFlush() {
+    this.flushTimer = this.ctx.setTimer(100, () => {
+      this.ctx.disk.fsync();
+      this.scheduleFlush();
+    });
+  }
+
+  // ── timers & roles ─────────────────────────────────────────────────────────
+
+  resetElectionTimer() {
+    this.ctx.cancelTimer(this.electionTimer);
+    const { electionMin: lo, electionMax: hi } = this.cfg;
+    this.electionTimer = this.ctx.setTimer(lo + this.ctx.random() * (hi - lo), () => {
+      this.electionTimer = null;
+      if (this.role !== 'leader') this.startElection();
+    });
+  }
+
+  becomeFollower(term, resetTimer) {
+    const wasLeader = this.role === 'leader';
+    if (term > this.currentTerm) this.setTerm(term);
+    if (wasLeader) {
+      this.ctx.emit('stepdown', { term: this.currentTerm });
+      this.ctx.cancelTimer(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+      this.abandonPending();
+    }
+    const changed = this.role !== 'follower';
+    this.role = 'follower';
+    this.votes = null;
+    if (resetTimer || changed) this.resetElectionTimer();
+  }
+
+  startElection() {
+    this.setTerm(this.currentTerm + 1);
+    this.setVote(this.ctx.id);
+    this.role = 'candidate';
+    this.leaderId = null;
+    this.votes = new Set([this.ctx.id]);
+    this.ctx.emit('candidate', { term: this.currentTerm });
+    this.resetElectionTimer();
+    if (this.votes.size >= this.majority) return this.becomeLeader();
+    this.requestVotes(this.currentTerm);
+  }
+
+  // Ask every peer that has not voted for us yet; repeat until the election
+  // resolves. RPCs get lost — a candidate that asks only once rarely wins.
+  requestVotes(term) {
+    if (this.role !== 'candidate' || this.currentTerm !== term) return;
+    for (const p of this.ctx.peers) {
+      if (this.votes.has(p)) continue;
+      this.ctx.send(p, {
+        type: 'RequestVote',
+        term,
+        lastLogIndex: this.lastIndex,
+        lastLogTerm: this.lastTerm,
+      });
+    }
+    this.ctx.setTimer(this.cfg.heartbeat, () => this.requestVotes(term));
+  }
+
+  becomeLeader() {
+    this.role = 'leader';
+    this.leaderId = this.ctx.id;
+    this.ctx.cancelTimer(this.electionTimer);
+    this.electionTimer = null;
+    this.nextIndex = {};
+    this.matchIndex = {};
+    for (const p of this.ctx.peers) {
+      this.nextIndex[p] = this.lastIndex + 1;
+      this.matchIndex[p] = 0;
+    }
+    this.ctx.emit('leader', { term: this.currentTerm });
+    // A no-op in the new term lets the leader commit everything it inherited.
+    // (Implementations with the figure-8 bug typically skip it — that is
+    // precisely what lets the bug bite.)
+    if (!this.bug('figure-8')) {
+      this.appendToLog([{ term: this.currentTerm, cmd: { f: NOOP, id: `noop:${this.currentTerm}` } }]);
+      this.syncLog();
+    }
+    this.broadcast();
+    this.advanceCommit();
+    this.scheduleHeartbeat();
+  }
+
+  scheduleHeartbeat() {
+    this.heartbeatTimer = this.ctx.setTimer(this.cfg.heartbeat, () => {
+      this.heartbeatTimer = null;
+      if (this.role !== 'leader') return;
+      this.broadcast();
+      this.scheduleHeartbeat();
+    });
+  }
+
+  abandonPending() {
+    // We can no longer tell these clients what happened: the entries may yet
+    // be committed by a future leader. "Unknown" is the only honest answer.
+    for (const p of this.pending.values()) {
+      this.ctx.send(p.client, { type: 'ClientResponse', reqId: p.reqId, unknown: true });
+    }
+    this.pending.clear();
+  }
+
+  // ── messages ───────────────────────────────────────────────────────────────
+
+  onMessage(from, m) {
+    switch (m.type) {
+      case 'RequestVote': return this.onRequestVote(from, m);
+      case 'RequestVoteReply': return this.onRequestVoteReply(from, m);
+      case 'AppendEntries': return this.onAppendEntries(from, m);
+      case 'AppendEntriesReply': return this.onAppendEntriesReply(from, m);
+      case 'ClientRequest': return this.onClientRequest(from, m);
+    }
+  }
+
+  onRequestVote(from, m) {
+    if (m.term > this.currentTerm) this.becomeFollower(m.term, false);
+    let granted = false;
+    if (m.term === this.currentTerm && (this.votedFor === null || this.votedFor === from)) {
+      const upToDate =
+        m.lastLogTerm > this.lastTerm ||
+        (m.lastLogTerm === this.lastTerm && m.lastLogIndex >= this.lastIndex);
+      if (upToDate || this.bug('vote-any-log')) {
+        granted = true;
+        if (this.votedFor !== from) {
+          this.setVote(from);
+          this.ctx.emit('vote', { term: this.currentTerm, for: from });
+        }
+        this.resetElectionTimer();
+      }
+    }
+    this.ctx.send(from, { type: 'RequestVoteReply', term: this.currentTerm, granted });
+  }
+
+  onRequestVoteReply(from, m) {
+    if (m.term > this.currentTerm) return this.becomeFollower(m.term, true);
+    if (this.role !== 'candidate' || m.term !== this.currentTerm || !m.granted) return;
+    this.votes.add(from);
+    if (this.votes.size >= this.majority) this.becomeLeader();
+  }
+
+  sendAppendEntries(peer) {
+    const next = this.nextIndex[peer];
+    const prev = next - 1;
+    this.ctx.send(peer, {
+      type: 'AppendEntries',
+      term: this.currentTerm,
+      prevLogIndex: prev,
+      prevLogTerm: this.log[prev].term,
+      entries: this.log.slice(next, next + this.cfg.batch),
+      leaderCommit: this.commitIndex,
+    });
+  }
+
+  broadcast() {
+    for (const p of this.ctx.peers) this.sendAppendEntries(p);
+  }
+
+  onAppendEntries(from, m) {
+    const reply = (success, extra) =>
+      this.ctx.send(from, { type: 'AppendEntriesReply', term: this.currentTerm, success, ...extra });
+
+    if (m.term < this.currentTerm) return reply(false, { conflictIndex: 0, stale: true });
+    if (m.term > this.currentTerm || this.role !== 'follower') this.becomeFollower(m.term, false);
+    this.leaderId = from;
+    this.resetElectionTimer();
+
+    if (m.prevLogIndex > this.lastIndex) {
+      return reply(false, { conflictIndex: this.lastIndex + 1 });
+    }
+    if (this.log[m.prevLogIndex].term !== m.prevLogTerm) {
+      const t = this.log[m.prevLogIndex].term;
+      let i = m.prevLogIndex;
+      while (i > 1 && this.log[i - 1].term === t) i--;
+      return reply(false, { conflictIndex: i });
+    }
+
+    let changed = false;
+    if (this.bug('truncate-on-match')) {
+      if (m.prevLogIndex + 1 <= this.lastIndex) this.truncateFrom(m.prevLogIndex + 1);
+      if (m.entries.length) this.appendToLog(m.entries);
+      changed = true;
+    } else {
+      for (let j = 0; j < m.entries.length; j++) {
+        const idx = m.prevLogIndex + 1 + j;
+        if (idx <= this.lastIndex) {
+          if (this.log[idx].term === m.entries[j].term) continue;
+          this.truncateFrom(idx);
+        }
+        this.appendToLog(m.entries.slice(j));
+        changed = true;
+        break;
+      }
+    }
+    if (changed) this.syncLog();
+
+    const lastNew = m.prevLogIndex + m.entries.length;
+    const newCommit = Math.min(m.leaderCommit, lastNew);
+    if (newCommit > this.commitIndex) {
+      this.commitIndex = newCommit;
+      this.apply();
+    }
+    reply(true, { matchIndex: lastNew });
+  }
+
+  onAppendEntriesReply(from, m) {
+    if (m.term > this.currentTerm) return this.becomeFollower(m.term, true);
+    if (this.role !== 'leader' || m.term !== this.currentTerm) return;
+    if (m.success) {
+      if (m.matchIndex > this.matchIndex[from]) this.matchIndex[from] = m.matchIndex;
+      this.nextIndex[from] = Math.max(this.nextIndex[from], this.matchIndex[from] + 1);
+      this.advanceCommit();
+    } else {
+      const floor = this.matchIndex[from] + 1;
+      const next = Math.max(floor, 1, Math.min(this.nextIndex[from] - 1, m.conflictIndex));
+      // Retry at once only if we learned something; otherwise wait for the
+      // next heartbeat rather than ping-ponging the same rejection forever.
+      if (next !== this.nextIndex[from]) {
+        this.nextIndex[from] = next;
+        this.sendAppendEntries(from);
+      }
+    }
+  }
+
+  advanceCommit() {
+    for (let n = this.lastIndex; n > this.commitIndex; n--) {
+      // Raft §5.4.2: only entries from the leader's current term are committed
+      // by counting replicas. Older entries are committed indirectly.
+      if (this.log[n].term !== this.currentTerm && !this.bug('figure-8')) break;
+      let count = 1;
+      for (const p of this.ctx.peers) if (this.matchIndex[p] >= n) count++;
+      if (count >= this.majority) {
+        this.commitIndex = n;
+        this.apply();
+        return;
+      }
+    }
+  }
+
+  apply() {
+    while (this.lastApplied < this.commitIndex && this.lastApplied < this.lastIndex) {
+      const index = ++this.lastApplied;
+      const e = this.log[index];
+      const result = this.execute(e.cmd);
+      this.ctx.emit('apply', { index, term: e.term, id: e.cmd.id });
+      const p = this.pending.get(index);
+      if (p) {
+        this.pending.delete(index);
+        if (p.term === e.term && p.id === e.cmd.id) {
+          this.ctx.send(p.client, { type: 'ClientResponse', reqId: p.reqId, ok: true, value: result });
+        } else {
+          this.ctx.send(p.client, { type: 'ClientResponse', reqId: p.reqId, unknown: true });
+        }
+      }
+    }
+  }
+
+  execute(cmd) {
+    if (cmd.f === NOOP) return null;
+    // Sessions: a command a client already applied is not applied again.
+    const s = this.sessions.get(cmd.client);
+    if (s && cmd.opId <= s.opId) return cmd.opId === s.opId ? s.result : null;
+    let result = null;
+    const cur = this.kv.has(cmd.key) ? this.kv.get(cmd.key) : null;
+    switch (cmd.f) {
+      case 'get': result = cur; break;
+      case 'put': this.kv.set(cmd.key, cmd.value); result = true; break;
+      case 'cas':
+        if (cur === cmd.value[0]) { this.kv.set(cmd.key, cmd.value[1]); result = true; } else result = false;
+        break;
+    }
+    this.sessions.set(cmd.client, { opId: cmd.opId, result });
+    return result;
+  }
+
+  onClientRequest(from, m) {
+    if (this.role !== 'leader') {
+      return this.ctx.send(from, { type: 'ClientResponse', reqId: m.reqId, notLeader: true, leader: this.leaderId });
+    }
+    const op = m.op;
+    if (op.f === 'get' && this.bug('stale-reads')) {
+      const v = this.kv.has(op.key) ? this.kv.get(op.key) : null;
+      return this.ctx.send(from, { type: 'ClientResponse', reqId: m.reqId, ok: true, value: v });
+    }
+    const cmd = { ...op, client: from, opId: m.opId, id: `${from}:${m.opId}` };
+    this.appendToLog([{ term: this.currentTerm, cmd }]);
+    this.syncLog();
+    if (op.f === 'put' && this.bug('ack-before-commit')) {
+      this.ctx.send(from, { type: 'ClientResponse', reqId: m.reqId, ok: true, value: true });
+    } else {
+      this.pending.set(this.lastIndex, { client: from, reqId: m.reqId, term: this.currentTerm, id: cmd.id });
+    }
+    this.broadcast();
+    this.advanceCommit();
+  }
+
+  // What the time-travel debugger shows for this node.
+  inspect() {
+    return {
+      role: this.role,
+      term: this.currentTerm,
+      votedFor: this.votedFor,
+      leader: this.leaderId,
+      commit: this.commitIndex,
+      applied: this.lastApplied,
+      log: this.log.slice(1).map((e) => [e.term, e.cmd.f === NOOP ? '·' : summarize(e.cmd)]),
+      kv: Object.fromEntries(this.kv),
+    };
+  }
+}
+
+function summarize(cmd) {
+  if (cmd.f === 'put') return `${cmd.key}=${cmd.value}`;
+  if (cmd.f === 'get') return `${cmd.key}?`;
+  if (cmd.f === 'cas') return `${cmd.key}:${cmd.value[0]}→${cmd.value[1]}`;
+  return cmd.f;
+}
+
+__exports.BUGS = BUGS;
+__exports.RaftNode = RaftNode;
+},
+"examples/raft/client.js": function (__exports, __require) {
+// A Raft client with honest failure semantics.
+//
+// It follows leader hints and retries on "not leader" (the request was
+// definitely not appended). But once a request has gone unanswered, it can
+// never say "failed" — the request might still be sitting in some node's log,
+// waiting to be committed by a future leader. So timeouts and give-ups are
+// reported as "info": outcome unknown. The checker knows how to handle those.
+
+class RaftClient {
+  constructor(ctx, { params = {}, scenario } = {}) {
+    this.ctx = ctx;
+    this.timeout = params.opTimeout ?? scenario?.workload?.opTimeout ?? 1000;
+    this.maxAttempts = 10;
+    this.leader = null;
+    this.reqSeq = 0;
+    this.opSeq = 0;
+    this.cur = null;
+  }
+
+  invoke(op, done) {
+    this.cur = { op, done, opId: ++this.opSeq, attempts: 0, reqId: 0, timer: null };
+    this.attempt();
+  }
+
+  attempt() {
+    const c = this.cur;
+    c.attempts++;
+    const nodes = this.ctx.nodes;
+    const target = this.leader ?? nodes[this.ctx.randomInt(0, nodes.length - 1)];
+    c.reqId = ++this.reqSeq;
+    this.ctx.send(target, { type: 'ClientRequest', reqId: c.reqId, opId: c.opId, op: c.op });
+    c.timer = this.ctx.setTimer(this.timeout, () => {
+      this.leader = null;
+      this.finish({ type: 'info' });
+    });
+  }
+
+  finish(res) {
+    const c = this.cur;
+    if (!c) return;
+    this.ctx.cancelTimer(c.timer);
+    this.cur = null;
+    c.done(res);
+  }
+
+  onMessage(from, m) {
+    const c = this.cur;
+    if (m.type !== 'ClientResponse' || !c || m.reqId !== c.reqId) return;
+    this.ctx.cancelTimer(c.timer);
+    if (m.notLeader) {
+      const others = this.ctx.nodes.filter((n) => n !== from);
+      this.leader = m.leader && m.leader !== from ? m.leader : others[this.ctx.randomInt(0, others.length - 1)];
+      if (c.attempts >= this.maxAttempts) return this.finish({ type: 'info' });
+      c.timer = this.ctx.setTimer(5 * c.attempts, () => this.attempt());
+      return;
+    }
+    if (m.unknown) return this.finish({ type: 'info' });
+    this.leader = from;
+    this.finish({ type: 'ok', value: m.value });
+  }
+}
+
+__exports.RaftClient = RaftClient;
+},
+"examples/raft/monitor.js": function (__exports, __require) {
+// Raft's safety properties (Figure 3 of the paper), checked live.
+//
+// Monitors see the stream of events nodes emit and keep their own god's-eye
+// memory of the universe — something no real node could ever have.
+
+function raftSafety() {
+  const leaders = new Map(); // term -> node
+  const applied = new Map(); // index -> { id, term, node }
+  return {
+    name: 'raft-safety',
+    onEmit(e) {
+      if (e.kind === 'leader') {
+        const prev = leaders.get(e.data.term);
+        if (prev && prev !== e.node) {
+          return {
+            rule: 'election-safety',
+            message: `Election Safety violated: ${prev} and ${e.node} were both elected leader of term ${e.data.term}`,
+          };
+        }
+        leaders.set(e.data.term, e.node);
+      } else if (e.kind === 'apply') {
+        const prev = applied.get(e.data.index);
+        if (!prev) applied.set(e.data.index, { ...e.data, node: e.node });
+        else if (prev.id !== e.data.id || prev.term !== e.data.term) {
+          return {
+            rule: 'state-machine-safety',
+            message: `State Machine Safety violated: at log index ${e.data.index}, ${prev.node} applied ` +
+              `${prev.id} (term ${prev.term}) but ${e.node} applied ${e.data.id} (term ${e.data.term})`,
+          };
+        }
+      } else if (e.kind === 'truncate' && e.data.from <= e.data.commit) {
+        return {
+          rule: 'leader-completeness',
+          message: `${e.node} discarded committed entries: truncated its log from index ${e.data.from} ` +
+            `although index ${e.data.commit} was already committed`,
+        };
+      }
+      return null;
+    },
+  };
+}
+
+__exports.raftSafety = raftSafety;
+},
+"examples/lease-lock/index.js": function (__exports, __require) {
+// Lease-based locking — the argument at the heart of "How to do distributed
+// locking" (Kleppmann, 2016) and the Redlock debate, made executable.
+//
+// Workers increment a shared counter with read-modify-write. A lock server
+// hands out leases (with monotonically increasing tokens) so only one worker
+// is supposed to be in the critical section at a time. Workers even double-
+// check their lease on their own clock before writing.
+//
+// It still isn't safe: a worker can be paused (GC, VM migration, swapping)
+// between checking its lease and writing, or its clock can drift. The fix is
+// fencing: the storage rejects requests carrying a token older than one it
+// has already seen. And — the part people miss — the storage must register
+// tokens on *reads* too, or a stale read slips through and an increment is
+// still lost.
+
+const BUGS = {
+  'no-fencing':
+    'The store ignores lease tokens and trusts that whoever writes holds the lock. A worker that stalls after checking its lease overwrites newer data.',
+  'fence-writes-only':
+    'The store fences writes but not reads. A stale holder can still read, then write before the new holder does, and an increment is lost.',
+};
+
+const LEASE_MS = 100;
+
+class LockServer {
+  constructor(ctx) { this.ctx = ctx; }
+  onStart() {
+    this.holder = null;
+    this.expires = 0;
+    this.token = 0;
+  }
+  onMessage(from, m) {
+    const now = this.ctx.now();
+    if (m.type === 'acquire') {
+      if (this.holder === null || now >= this.expires || this.holder === from) {
+        this.holder = from;
+        this.token++;
+        this.expires = now + LEASE_MS;
+        this.ctx.send(from, { type: 'granted', reqId: m.reqId, token: this.token, ttl: LEASE_MS });
+      } else {
+        this.ctx.send(from, { type: 'busy', reqId: m.reqId, retryIn: this.expires - now });
+      }
+    } else if (m.type === 'release' && this.holder === from && m.token === this.token) {
+      this.holder = null;
+    }
+  }
+  inspect() {
+    return { role: this.holder ? 'locked' : 'free', holder: this.holder, token: this.token, expires: Math.round(this.expires) };
+  }
+}
+
+class Store {
+  constructor(ctx, bugs) { this.ctx = ctx; this.bugs = bugs; }
+  onStart() {
+    this.value = 0;
+    this.maxToken = 0;
+    this.lastWid = new Map();
+  }
+  stale(token) {
+    return !this.bugs.has('no-fencing') && token < this.maxToken;
+  }
+  onMessage(from, m) {
+    if (m.type === 'read') {
+      const fenceReads = !this.bugs.has('no-fencing') && !this.bugs.has('fence-writes-only');
+      if (fenceReads && this.stale(m.token)) {
+        return this.ctx.send(from, { type: 'rejected', reqId: m.reqId, maxToken: this.maxToken });
+      }
+      if (fenceReads) this.maxToken = Math.max(this.maxToken, m.token);
+      this.ctx.send(from, { type: 'value', reqId: m.reqId, value: this.value });
+    } else if (m.type === 'write') {
+      if ((this.lastWid.get(from) ?? 0) >= m.wid) return; // duplicate delivery
+      this.lastWid.set(from, m.wid);
+      if (this.stale(m.token)) {
+        return this.ctx.send(from, { type: 'rejected', reqId: m.reqId, maxToken: this.maxToken });
+      }
+      if (!this.bugs.has('no-fencing')) this.maxToken = Math.max(this.maxToken, m.token);
+      const prev = this.value;
+      this.value = m.value;
+      this.ctx.emit('write', { worker: from, token: m.token, prev, value: m.value });
+      this.ctx.send(from, { type: 'written', reqId: m.reqId });
+    }
+  }
+  inspect() { return { role: 'store', value: this.value, maxToken: this.maxToken }; }
+}
+
+class Worker {
+  constructor(ctx) { this.ctx = ctx; }
+  onStart() {
+    this.state = 'idle';
+    this.reqId = 0;
+    this.wid = 0;
+    this.token = null;
+    this.leaseEnd = 0;
+    this.value = null;
+    this.retry = null;
+    this.later(this.ctx.random() * 30, () => this.acquire());
+  }
+  later(ms, fn) { return this.ctx.setTimer(ms, fn); }
+
+  acquire() {
+    this.state = 'acquiring';
+    this.token = null;
+    const reqId = ++this.reqId;
+    this.ctx.send('lock', { type: 'acquire', reqId });
+    this.ctx.cancelTimer(this.retry);
+    this.retry = this.later(50, () => { if (this.reqId === reqId) this.acquire(); });
+  }
+
+  onMessage(from, m) {
+    if (m.reqId !== this.reqId) return;
+    this.ctx.cancelTimer(this.retry);
+    switch (m.type) {
+      case 'busy':
+        this.state = 'waiting';
+        this.retry = this.later(Math.max(2, m.retryIn) + this.ctx.random() * 10, () => this.acquire());
+        break;
+      case 'granted':
+        this.token = m.token;
+        this.leaseEnd = this.ctx.now() + m.ttl;
+        this.state = 'reading';
+        this.ctx.emit('acquired', { token: m.token });
+        this.ctx.send('store', { type: 'read', reqId: ++this.reqId, token: m.token });
+        this.retry = this.later(50, () => this.acquire());
+        break;
+      case 'value':
+        this.value = m.value;
+        this.state = 'working';
+        this.ctx.emit('read', { value: m.value, token: this.token });
+        this.later(5 + this.ctx.random() * 20, () => this.finishWork());
+        break;
+      case 'written':
+        this.ctx.send('lock', { type: 'release', token: this.token });
+        this.state = 'idle';
+        this.token = null;
+        this.later(this.ctx.random() * 30, () => this.acquire());
+        break;
+      case 'rejected':
+        this.ctx.emit('fenced', { token: this.token, maxToken: m.maxToken });
+        this.state = 'idle';
+        this.token = null;
+        this.later(5 + this.ctx.random() * 20, () => this.acquire());
+        break;
+    }
+  }
+
+  finishWork() {
+    if (this.state !== 'working') return;
+    // The "careful" check everyone writes: is my lease still valid?
+    if (this.ctx.now() >= this.leaseEnd) {
+      this.ctx.emit('expired', { token: this.token });
+      return this.acquire();
+    }
+    this.ctx.emit('checked', { token: this.token, left: Math.round(this.leaseEnd - this.ctx.now()) });
+    // …and then a moment later, the write goes out. Anything can happen in
+    // that moment: a GC pause, a page fault, a slow network.
+    this.state = 'writing';
+    const reqId = ++this.reqId;
+    this.later(1, () => {
+      if (this.reqId !== reqId) return;
+      this.ctx.send('store', { type: 'write', reqId, token: this.token, value: this.value + 1, wid: ++this.wid });
+      this.retry = this.later(80, () => this.acquire());
+    });
+  }
+
+  inspect() {
+    return {
+      role: this.state,
+      token: this.token,
+      leaseLeft: this.token ? Math.round(this.leaseEnd - this.ctx.now()) : null,
+      value: this.value,
+    };
+  }
+}
+
+function lostUpdates(scenario) {
+  let last = null;
+  let progressAfterHeal = false;
+  return {
+    name: 'counter',
+    onEmit(e) {
+      if (e.kind !== 'write') return null;
+      const d = e.data;
+      if (e.t >= scenario.healAt) progressAfterHeal = true;
+      if (d.value !== d.prev + 1) {
+        let why = 'two workers were inside the critical section at once.';
+        if (last && last.worker !== d.worker) {
+          why = last.token < d.token
+            ? `${last.worker} (token ${last.token}) wrote ${last.value} after its lease had already passed to ${d.worker} — ` +
+              `between ${d.worker}'s read and its write. Two workers were inside the critical section at once.`
+            : `${d.worker}'s lease had lapsed: ${last.worker} (token ${last.token}) had taken over and written ${last.value}, ` +
+              `yet the store accepted the stale holder's write.`;
+        }
+        return {
+          rule: 'lost-update',
+          message: `lost update: ${d.worker} (token ${d.token}) wrote ${d.value} over ${d.prev}. ${why}`,
+        };
+      }
+      last = d;
+      return null;
+    },
+    onEnd(world) {
+      if (scenario.healAt < scenario.duration - 1_000_000 && !progressAfterHeal) {
+        return { rule: 'no-progress', message: 'no increment succeeded in the second after every fault healed' };
+      }
+      return null;
+    },
+  };
+}
+
+const system = {
+  name: 'lease-lock',
+  title: 'Lease lock + fencing',
+  summary: 'Workers incrementing a shared counter under a lease-based lock (Kleppmann vs. Redlock).',
+  defaults: { duration: 6000, quiesce: 1500, network: { dup: 0 } },
+  topology(rng) {
+    const workers = rng.range(2, 3);
+    return { nodes: ['lock', 'store', ...Array.from({ length: workers }, (_, i) => `w${i + 1}`)], clients: [] };
+  },
+  faults: ['pause', 'clock', 'partition'],
+  targets: {
+    pause: (nodes) => nodes.filter((n) => n.startsWith('w')),
+    clock: (nodes) => nodes.filter((n) => n !== 'store'),
+    crash: () => [],
+  },
+  triggers: { acquired: 6, read: 6, checked: 6 },
+  bugs: BUGS,
+  createNode(ctx, { bugs }) {
+    if (ctx.id === 'lock') return new LockServer(ctx);
+    if (ctx.id === 'store') return new Store(ctx, bugs);
+    return new Worker(ctx);
+  },
+  createClient() { throw new Error('lease-lock has no clients'); },
+  monitors: ({ scenario }) => [lostUpdates(scenario)],
+  describe(e) {
+    switch (e.kind) {
+      case 'acquired': return `acquires the lock (token ${e.data.token})`;
+      case 'read': return `reads counter = ${e.data.value}`;
+      case 'checked': return `checks its lease: ${e.data.left}ms left, safe to write`;
+      case 'expired': return 'sees its lease has expired and backs off';
+      case 'fenced': return `is fenced off: token ${e.data.token} < ${e.data.maxToken}`;
+      case 'write': return `stores ${e.data.value} from ${e.data.worker} (token ${e.data.token})`;
+      default: return null;
+    }
+  },
+  messageColors: {
+    acquire: 'violet', granted: 'violet', busy: 'violet', release: 'violet',
+    read: 'blue', value: 'blue',
+    write: 'teal', written: 'teal',
+    rejected: 'red',
+  },
+};
+
+__exports.BUGS = BUGS;
+__exports.system = system;
+},
+"examples/gossip-register/index.js": function (__exports, __require) {
+// The smallest interesting system: a replicated register where every node
+// accepts writes, applies them locally, and gossips them to its peers.
+// It is fast, simple, always available… and not linearizable.
+//
+//   everett explore examples/gossip-register
+//
+// This file is the template for testing your own system with Everett.
+
+const { kvModel, kvGenerator } = __require("src/index.js");
+
+class Replica {
+  constructor(ctx) {
+    this.ctx = ctx;
+    this.data = new Map();
+  }
+
+  onMessage(from, m) {
+    if (m.type === 'put') {
+      this.data.set(m.key, m.value);
+      for (const peer of this.ctx.peers) this.ctx.send(peer, { type: 'sync', key: m.key, value: m.value });
+      this.ctx.send(from, { type: 'reply', id: m.id, value: true });
+    } else if (m.type === 'get') {
+      this.ctx.send(from, { type: 'reply', id: m.id, value: this.data.get(m.key) ?? null });
+    } else if (m.type === 'sync') {
+      this.data.set(m.key, m.value);
+    }
+  }
+
+  // Optional: what the time-travel debugger shows for this node.
+  inspect() {
+    return { role: 'replica', kv: Object.fromEntries(this.data) };
+  }
+}
+
+class Client {
+  constructor(ctx) {
+    this.ctx = ctx;
+    this.seq = 0;
+    this.pending = null;
+  }
+
+  // Called by the workload with { f, key, value }. Report exactly once:
+  // { type: 'ok', value } on success, { type: 'info' } if the outcome is unknown.
+  invoke(op, done) {
+    const id = ++this.seq;
+    const node = this.ctx.nodes[this.ctx.randomInt(0, this.ctx.nodes.length - 1)];
+    this.ctx.send(node, { type: op.f, key: op.key, value: op.value, id });
+    const timer = this.ctx.setTimer(500, () => { this.pending = null; done({ type: 'info' }); });
+    this.pending = { id, done, timer };
+  }
+
+  onMessage(from, m) {
+    if (!this.pending || m.id !== this.pending.id) return;
+    const { done, timer } = this.pending;
+    this.ctx.cancelTimer(timer);
+    this.pending = null;
+    done({ type: 'ok', value: m.value });
+  }
+}
+
+const system = {
+  name: 'gossip-register',
+  title: 'Gossip register',
+  summary: 'Every node accepts writes and gossips them. Always available, never linearizable.',
+  defaults: { nodes: 3, clients: 3 },
+  createNode: (ctx) => new Replica(ctx),
+  createClient: (ctx) => new Client(ctx),
+  workload: () => kvGenerator({ keys: ['x'], reads: 0.5, cas: 0 }),
+  model: kvModel,
+  describe: () => null,
+};
+
+__exports.system = system;
+},
+"viz/app.js": function (__exports, __require) {
+// Everett Lab: the time-travel debugger and the in-browser multiverse.
+//
+// Everything runs client-side. The same engine the CLI uses explores
+// universes here, shrinks the first one that breaks, replays it with full
+// recording, and hands the trace to the space-time diagram below.
+
+const { makeScenario, runScenario, exploreAsync, shrink, narrate, fmtTime, models } = __require("src/index.js");
+const { system: raft } = __require("examples/raft/index.js");
+const { system: leaseLock } = __require("examples/lease-lock/index.js");
+const { system: gossip } = __require("examples/gossip-register/index.js");
+
+const SYSTEMS = { raft, 'lease-lock': leaseLock, 'gossip-register': gossip };
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+const nextFrame = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+
+const AXIS_H = 26, LABEL_W = 64, PAD_R = 16, NODE_H = 46, CLIENT_H = 30, BOTTOM = 12;
+
+const ROLE_COLOR = {
+  leader: 'leader', candidate: 'candidate', follower: 'follower',
+  locked: 'leader', free: 'follower', store: 'm-teal',
+  reading: 'm-blue', working: 'leader', writing: 'm-orange',
+  acquiring: 'follower', waiting: 'follower', idle: 'follower',
+};
+
+const S = {
+  system: raft,
+  trace: null,
+  m: null,
+  view: { t0: 0, t1: 1 },
+  cursor: 0,
+  playing: false,
+  speed: 0.1,
+  hidden: new Set(),
+  hover: null,
+  colors: {},
+  exploring: false,
+  grid: null,
+  fingerprint: null,
+  bugs: [],
+};
+
+// ── colours ──────────────────────────────────────────────────────────────────
+
+const COLOR_KEYS = ['bg', 'panel', 'panel-2', 'border', 'text', 'muted', 'faint', 'grid', 'accent', 'leader', 'candidate',
+  'follower', 'ok', 'info', 'failop', 'bad', 'fault', 'pause', 'm-blue', 'm-teal', 'm-violet', 'm-orange', 'm-red', 'm-gray'];
+
+function readColors() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of COLOR_KEYS) S.colors[k] = cs.getPropertyValue('--' + k).trim();
+}
+const col = (k) => S.colors[k] || '#888';
+const msgColor = (type) => col('m-' + ((S.system.messageColors || {})[type] || 'gray'));
+const roleColor = (role) => col(ROLE_COLOR[role] || 'm-gray');
+const termColor = (term) => `hsl(${(term * 67 + 190) % 360} 70% 62%)`;
+
+function alpha(color, a) {
+  if (color.startsWith('#') && color.length === 7) {
+    const n = parseInt(color.slice(1), 16);
+    return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`;
+  }
+  return color;
+}
+
+// ── trace → render model ─────────────────────────────────────────────────────
+
+function prepare(trace, system) {
+  const lanes = [
+    ...trace.nodes.map((id) => ({ id, kind: 'node', h: NODE_H })),
+    ...trace.clients.map((id) => ({ id, kind: 'client', h: CLIENT_H })),
+  ];
+  let y = AXIS_H;
+  for (const l of lanes) { l.y = y + l.h / 2; y += l.h; }
+  const height = y + BOTTOM;
+  const laneOf = new Map(lanes.map((l) => [l.id, l]));
+  const end = Math.max(trace.end, 1);
+
+  // Per-node snapshots for "state at time t".
+  const snaps = new Map(trace.nodes.map((id) => [id, []]));
+  for (const s of trace.snapshots) snaps.get(s.node)?.push(s);
+
+  // Role/status segments per node lane.
+  const segs = new Map();
+  for (const id of trace.nodes) {
+    const evs = [];
+    for (const s of snaps.get(id)) evs.push({ t: s.t, role: s.state && s.state.role });
+    for (const l of trace.life) if (l.node === id) evs.push({ t: l.t, life: l.what });
+    evs.sort((a, b) => a.t - b.t);
+    const out = [];
+    let role = null, status = 'up', t0 = 0;
+    const close = (t) => { if (t > t0) out.push({ t0, t1: t, role, status }); t0 = t; };
+    for (const e of evs) {
+      if (e.life) {
+        const next = e.life === 'crash' ? 'down' : e.life === 'pause' ? 'paused' : (e.life === 'resume' || e.life === 'restart' || e.life === 'boot') ? 'up' : status;
+        if (next !== status) { close(e.t); status = next; }
+      } else if (e.role !== role) { close(e.t); role = e.role; }
+    }
+    close(end);
+    segs.set(id, out);
+  }
+
+  // Partition bands.
+  const bands = [];
+  let open = null;
+  for (const f of trace.faults) {
+    if (f.type === 'partition') {
+      if (open) { open.t1 = f.t; bands.push(open); }
+      open = { t0: f.t, t1: end, kind: f.kind, cuts: f.cuts, trigger: f.trigger };
+    } else if ((f.type === 'heal' || f.type === 'heal-all') && open) {
+      open.t1 = f.t; bands.push(open); open = null;
+    }
+  }
+  if (open) bands.push(open);
+
+  // Markers: faults and narrated events.
+  const marks = [];
+  for (const f of trace.faults) {
+    if (f.node && laneOf.has(f.node)) marks.push({ t: f.t, lane: laneOf.get(f.node), kind: 'fault', f });
+  }
+  for (const e of trace.emits) {
+    const text = system.describe ? system.describe(e) : null;
+    if (!text || !laneOf.has(e.node)) continue;
+    marks.push({ t: e.t, lane: laneOf.get(e.node), kind: 'emit', e, text });
+  }
+
+  const types = [...new Set(trace.messages.map((m) => m.type))];
+  const v = trace.violation;
+  const involved = v && v.involved ? new Set(v.involved) : null;
+
+  const times = new Set();
+  for (const m of trace.messages) { times.add(m.sent); if (m.recv !== null) times.add(m.recv); }
+  for (const e of trace.emits) times.add(e.t);
+  for (const f of trace.faults) times.add(f.t);
+  for (const o of trace.history) { times.add(o.invoke); if (o.complete !== null) times.add(o.complete); }
+
+  // Message density for the scrubber.
+  const BINS = 400;
+  const density = new Float32Array(BINS);
+  for (const m of trace.messages) density[Math.min(BINS - 1, Math.floor((m.sent / end) * BINS))]++;
+
+  return {
+    lanes, laneOf, height, end, snaps, segs, bands, marks, types, involved,
+    times: [...times].sort((a, b) => a - b),
+    density,
+    story: narrate(system, trace, { maxLines: 60 }),
+  };
+}
+
+// ── loading ──────────────────────────────────────────────────────────────────
+
+function loadTrace(trace, system, { fingerprint = null, bugs = [] } = {}) {
+  S.trace = trace;
+  S.system = system;
+  S.fingerprint = fingerprint || trace.fingerprint || null;
+  S.bugs = bugs.length ? bugs : (trace.scenario?.bugs || []);
+  S.m = prepare(trace, system);
+  S.hidden = new Set();
+  S.playing = false;
+  $('btn-play').textContent = '▶';
+  buildChips();
+  renderVerdict();
+  renderStory();
+  layout();
+  if (trace.violation) focusViolation(); else fit();
+  setCursor(trace.violation ? Math.max(0, trace.violation.time - (S.view.t1 - S.view.t0) * 0.15) : 0);
+}
+
+function renderVerdict() {
+  const t = S.trace, el = $('verdict');
+  const seed = t.scenario ? `seed ${t.scenario.seed}` : '';
+  const meta = `${S.system.name} · ${seed}${S.bugs.length ? ' · bug: ' + S.bugs.join(', ') : ''}`;
+  if (t.violation) {
+    el.className = 'verdict bad';
+    el.innerHTML = `✗ ${esc(t.violation.message)}<span class="meta">${esc(meta)}</span>`;
+    el.title = t.violation.message;
+  } else {
+    el.className = 'verdict good';
+    el.innerHTML = `✓ every invariant held<span class="meta">${esc(meta)}</span>`;
+    el.title = '';
+  }
+}
+
+function buildChips() {
+  const box = $('msg-filter');
+  box.innerHTML = '';
+  for (const type of S.m.types) {
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.innerHTML = `<i style="background:${msgColor(type)}"></i>${esc(type)}`;
+    chip.onclick = () => {
+      if (S.hidden.has(type)) S.hidden.delete(type); else S.hidden.add(type);
+      chip.classList.toggle('off', S.hidden.has(type));
+      draw();
+    };
+    box.appendChild(chip);
+  }
+}
+
+// ── view & cursor ────────────────────────────────────────────────────────────
+
+const canvas = $('diagram');
+const ctx2 = canvas.getContext('2d');
+let W = 800, H = 300, dpr = 1;
+
+function layout() {
+  if (!S.m) return;
+  dpr = window.devicePixelRatio || 1;
+  W = canvas.parentElement.clientWidth;
+  H = S.m.height;
+  canvas.style.height = H + 'px';
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  layoutScrub();
+  draw();
+}
+
+const plotW = () => W - LABEL_W - PAD_R;
+const xOf = (t) => LABEL_W + ((t - S.view.t0) / (S.view.t1 - S.view.t0)) * plotW();
+const tOf = (x) => S.view.t0 + ((x - LABEL_W) / plotW()) * (S.view.t1 - S.view.t0);
+
+function setView(t0, t1) {
+  const end = S.m.end;
+  const span = clamp(t1 - t0, 200, end * 1.05);
+  t0 = clamp(t0, -end * 0.02, end * 1.02 - span);
+  S.view = { t0, t1: t0 + span };
+  draw();
+}
+
+function fit() { setView(-S.m.end * 0.01, S.m.end * 1.01); }
+
+function focusViolation() {
+  const v = S.trace.violation;
+  if (!v) return fit();
+  const span = Math.min(S.m.end, Math.max(60_000, v.time * 0.35));
+  setView(v.time - span * 0.8, v.time + span * 0.2);
+}
+
+function setCursor(t) {
+  S.cursor = clamp(t, 0, S.m.end);
+  const span = S.view.t1 - S.view.t0;
+  if (S.cursor < S.view.t0 || S.cursor > S.view.t1) setView(S.cursor - span * 0.5, S.cursor + span * 0.5);
+  $('clock').textContent = fmtT(S.cursor, span);
+  renderState();
+  updateStory();
+  draw();
+}
+
+function fmtT(t, span = 1e6) {
+  return (t / 1e6).toFixed(span < 20_000 ? 6 : span < 200_000 ? 4 : 3) + 's';
+}
+
+// ── drawing ──────────────────────────────────────────────────────────────────
+
+function niceStep(span) {
+  const target = span / Math.max(4, plotW() / 110);
+  const steps = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1e3, 2e3, 5e3, 1e4, 2e4, 5e4, 1e5, 2e5, 5e5, 1e6, 2e6, 5e6, 1e7];
+  return steps.find((s) => s >= target) || 1e7;
+}
+
+function tickLabel(t, step) {
+  if (step >= 1e6) return `${t / 1e6}s`;
+  if (step >= 1e3) return `${+(t / 1e3).toFixed(3)}ms`;
+  return `${t}µs`;
+}
+
+function visibleMessages() {
+  const { t0, t1 } = S.view;
+  return S.trace.messages.filter((m) => {
+    if (S.hidden.has(m.type)) return false;
+    const r = m.recv === null ? S.m.end : m.recv;
+    return !(r < t0 || m.sent > t1);
+  });
+}
+
+function draw() {
+  if (!S.m) return;
+  const g = ctx2;
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, W, H);
+  g.fillStyle = col('panel');
+  g.fillRect(0, 0, W, H);
+  const { lanes, laneOf } = S.m;
+  const nodeLanes = lanes.filter((l) => l.kind === 'node');
+  const nodesTop = AXIS_H, nodesBottom = nodeLanes.length ? nodeLanes[nodeLanes.length - 1].y + NODE_H / 2 : AXIS_H;
+  const span = S.view.t1 - S.view.t0;
+
+  g.save();
+  g.beginPath();
+  g.rect(LABEL_W, 0, plotW(), H);
+  g.clip();
+
+  // Partition bands.
+  for (const b of S.m.bands) {
+    if (b.t1 < S.view.t0 || b.t0 > S.view.t1) continue;
+    const x0 = xOf(b.t0), x1 = xOf(b.t1);
+    g.fillStyle = alpha(col('fault'), 0.09);
+    g.fillRect(x0, nodesTop, x1 - x0, nodesBottom - nodesTop);
+    g.strokeStyle = alpha(col('fault'), 0.5);
+    g.setLineDash([3, 3]);
+    g.beginPath(); g.moveTo(x0 + 0.5, nodesTop); g.lineTo(x0 + 0.5, nodesBottom); g.stroke();
+    g.setLineDash([]);
+    if (x1 - x0 > 60) {
+      g.fillStyle = col('fault');
+      g.font = '10px ' + getMono();
+      g.fillText(`⟂ ${b.kind}`, Math.max(x0, LABEL_W) + 4, nodesTop + 11);
+    }
+  }
+
+  // Time grid.
+  const step = niceStep(span);
+  g.strokeStyle = col('grid');
+  g.fillStyle = col('muted');
+  g.font = '10px ' + getMono();
+  g.lineWidth = 1;
+  for (let t = Math.ceil(S.view.t0 / step) * step; t <= S.view.t1; t += step) {
+    const x = Math.round(xOf(t)) + 0.5;
+    g.beginPath(); g.moveTo(x, AXIS_H - 6); g.lineTo(x, H - BOTTOM); g.stroke();
+    g.fillText(tickLabel(t, step), x + 3, 15);
+  }
+
+  // Lane baselines and node role segments.
+  for (const l of lanes) {
+    g.strokeStyle = col('border');
+    g.beginPath(); g.moveTo(LABEL_W, Math.round(l.y) + 0.5); g.lineTo(W, Math.round(l.y) + 0.5); g.stroke();
+  }
+  for (const l of nodeLanes) {
+    for (const s of S.m.segs.get(l.id)) {
+      if (s.t1 < S.view.t0 || s.t0 > S.view.t1) continue;
+      const x0 = xOf(s.t0), x1 = xOf(s.t1);
+      if (s.status === 'down') {
+        g.strokeStyle = alpha(col('bad'), 0.8);
+        g.setLineDash([2, 4]);
+        g.lineWidth = 1.5;
+        g.beginPath(); g.moveTo(x0, l.y); g.lineTo(x1, l.y); g.stroke();
+        g.setLineDash([]);
+      } else if (s.status === 'paused') {
+        g.fillStyle = alpha(col('pause'), 0.35);
+        g.fillRect(x0, l.y - 6, x1 - x0, 12);
+        g.strokeStyle = alpha(col('pause'), 0.9);
+        g.lineWidth = 1;
+        g.beginPath();
+        for (let x = x0 - ((x0 - LABEL_W) % 6); x < x1; x += 6) {
+          g.moveTo(Math.max(x, x0), l.y + 6); g.lineTo(Math.min(x + 6, x1), l.y - 6);
+        }
+        g.stroke();
+      } else {
+        g.fillStyle = roleColor(s.role);
+        const thick = s.role === 'leader' || s.role === 'locked' ? 7 : 4;
+        g.fillRect(x0, l.y - thick / 2, Math.max(1, x1 - x0), thick);
+      }
+    }
+    g.lineWidth = 1;
+  }
+
+  // Client operations.
+  const v = S.trace.violation;
+  const involved = S.m.involved;
+  for (const o of S.trace.history) {
+    const l = laneOf.get(o.client);
+    if (!l) continue;
+    const t1 = o.complete === null ? S.m.end : o.complete;
+    if (t1 < S.view.t0 || o.invoke > S.view.t1) continue;
+    const x0 = xOf(o.invoke), x1 = Math.max(x0 + 2, xOf(t1));
+    const culprit = v && v.culprit === o.id;
+    const dim = involved && !involved.has(o.id);
+    let fill = o.type === 'ok' ? col('ok') : o.type === 'info' ? col('info') : col('failop');
+    if (culprit) fill = col('bad');
+    g.fillStyle = alpha(fill, dim ? 0.18 : culprit ? 0.9 : 0.55);
+    roundRect(g, x0, l.y - 8, x1 - x0, 16, 3);
+    g.fill();
+    if (culprit) { g.strokeStyle = col('bad'); g.lineWidth = 2; g.stroke(); g.lineWidth = 1; }
+    if (x1 - x0 > 46 && S.system.model) {
+      g.fillStyle = dim ? col('faint') : col('text');
+      g.font = '10px ' + getMono();
+      const label = S.system.model.describe(o);
+      g.save(); g.beginPath(); g.rect(x0, l.y - 8, x1 - x0, 16); g.clip();
+      g.fillText(label, x0 + 4, l.y + 3.5);
+      g.restore();
+    }
+  }
+
+  // Messages.
+  const msgs = visibleMessages();
+  const a = clamp(500 / Math.max(1, msgs.length), 0.12, 0.85);
+  const arrows = msgs.length < 400;
+  const groups = new Map();
+  for (const m of msgs) {
+    const c = msgColor(m.type);
+    if (!groups.has(c)) groups.set(c, []);
+    groups.get(c).push(m);
+  }
+  g.lineWidth = 1.1;
+  for (const [c, list] of groups) {
+    g.strokeStyle = alpha(c, a);
+    g.beginPath();
+    for (const m of list) {
+      const lf = laneOf.get(m.from), lt = laneOf.get(m.to);
+      if (!lf || !lt) continue;
+      const x0 = xOf(m.sent);
+      if (m.drop && m.recv === m.sent) {
+        const dy = Math.sign(lt.y - lf.y) * 10;
+        g.moveTo(x0, lf.y); g.lineTo(x0 + 8, lf.y + dy);
+        continue;
+      }
+      const x1 = xOf(m.recv === null ? S.m.end : m.recv);
+      g.moveTo(x0, lf.y); g.lineTo(x1, lt.y);
+    }
+    g.stroke();
+  }
+  // Drop crosses and arrowheads.
+  for (const m of msgs) {
+    const lf = laneOf.get(m.from), lt = laneOf.get(m.to);
+    if (!lf || !lt) continue;
+    if (m.drop) {
+      let x, y;
+      if (m.recv === m.sent) { x = xOf(m.sent) + 8; y = lf.y + Math.sign(lt.y - lf.y) * 10; }
+      else { x = xOf(m.recv); y = lt.y; }
+      cross(g, x, y, 3, alpha(col('bad'), Math.max(a, 0.5)));
+    } else if (arrows && m.recv !== null) {
+      arrowHead(g, xOf(m.sent), lf.y, xOf(m.recv), lt.y, alpha(msgColor(m.type), Math.max(a, 0.6)));
+    }
+  }
+
+  // Hovered message on top.
+  if (S.hover && S.hover.kind === 'msg') {
+    const m = S.hover.m, lf = laneOf.get(m.from), lt = laneOf.get(m.to);
+    g.strokeStyle = msgColor(m.type);
+    g.lineWidth = 2.5;
+    g.beginPath();
+    g.moveTo(xOf(m.sent), lf.y);
+    if (m.drop && m.recv === m.sent) g.lineTo(xOf(m.sent) + 8, lf.y + Math.sign(lt.y - lf.y) * 10);
+    else g.lineTo(xOf(m.recv ?? S.m.end), lt.y);
+    g.stroke();
+    g.lineWidth = 1;
+  }
+
+  // Messages in flight at the cursor.
+  for (const m of msgs) {
+    if (m.drop && m.recv === m.sent) continue;
+    const r = m.recv === null ? S.m.end : m.recv;
+    if (m.sent > S.cursor || r <= S.cursor) continue;
+    const lf = laneOf.get(m.from), lt = laneOf.get(m.to);
+    const p = (S.cursor - m.sent) / Math.max(1, r - m.sent);
+    const x = xOf(m.sent) + (xOf(r) - xOf(m.sent)) * p;
+    const y = lf.y + (lt.y - lf.y) * p;
+    g.fillStyle = msgColor(m.type);
+    g.beginPath(); g.arc(x, y, 3.2, 0, Math.PI * 2); g.fill();
+  }
+
+  // Event and fault markers.
+  for (const mk of S.m.marks) {
+    if (mk.t < S.view.t0 || mk.t > S.view.t1) continue;
+    const x = xOf(mk.t), y = mk.lane.y;
+    if (mk.kind === 'fault') drawFault(g, mk.f, x, y);
+    else drawEmit(g, mk.e, x, y);
+  }
+
+  // Violation.
+  if (v) {
+    const x = xOf(v.time);
+    g.strokeStyle = col('bad');
+    g.lineWidth = 1.5;
+    g.setLineDash([5, 4]);
+    g.beginPath(); g.moveTo(x, AXIS_H - 4); g.lineTo(x, H - BOTTOM); g.stroke();
+    g.setLineDash([]);
+    g.lineWidth = 1;
+    g.fillStyle = col('bad');
+    g.font = '600 10px ' + getMono();
+    const label = '✗ violation';
+    const lw = g.measureText(label).width;
+    g.fillText(label, x + 4 + lw > W - PAD_R ? x - lw - 4 : x + 4, AXIS_H + 10);
+  }
+
+  // Cursor.
+  const cx = Math.round(xOf(S.cursor)) + 0.5;
+  g.strokeStyle = col('accent');
+  g.lineWidth = 1.5;
+  g.beginPath(); g.moveTo(cx, AXIS_H - 8); g.lineTo(cx, H - BOTTOM + 4); g.stroke();
+  g.fillStyle = col('accent');
+  g.beginPath(); g.moveTo(cx - 5, AXIS_H - 12); g.lineTo(cx + 5, AXIS_H - 12); g.lineTo(cx, AXIS_H - 5); g.fill();
+  g.lineWidth = 1;
+  g.restore();
+
+  // Lane labels (outside the clip).
+  g.fillStyle = col('panel');
+  g.fillRect(0, 0, LABEL_W, H);
+  g.strokeStyle = col('border');
+  g.beginPath(); g.moveTo(LABEL_W - 0.5, 0); g.lineTo(LABEL_W - 0.5, H); g.stroke();
+  for (const l of lanes) {
+    const st = l.kind === 'node' ? statusAt(l.id, S.cursor) : null;
+    g.fillStyle = l.kind === 'node' ? col('text') : col('muted');
+    g.font = (l.kind === 'node' ? '600 12px ' : '11px ') + getMono();
+    g.fillText(l.id, 12, l.y + 4);
+    if (st) {
+      const snap = snapAt(l.id, S.cursor);
+      const role = snap && snap.state ? snap.state.role : null;
+      g.fillStyle = st === 'down' ? col('bad') : st === 'paused' ? col('pause') : roleColor(role);
+      g.beginPath(); g.arc(LABEL_W - 12, l.y, 4, 0, Math.PI * 2); g.fill();
+    }
+  }
+  drawScrub();
+}
+
+let monoFont = null;
+function getMono() {
+  if (!monoFont) monoFont = getComputedStyle(document.documentElement).getPropertyValue('--mono').trim() || 'monospace';
+  return monoFont;
+}
+
+function roundRect(g, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath();
+}
+
+function cross(g, x, y, s, color) {
+  g.strokeStyle = color;
+  g.lineWidth = 1.6;
+  g.beginPath();
+  g.moveTo(x - s, y - s); g.lineTo(x + s, y + s);
+  g.moveTo(x + s, y - s); g.lineTo(x - s, y + s);
+  g.stroke();
+  g.lineWidth = 1;
+}
+
+function arrowHead(g, x0, y0, x1, y1, color) {
+  const ang = Math.atan2(y1 - y0, x1 - x0);
+  const s = 6;
+  g.fillStyle = color;
+  g.beginPath();
+  g.moveTo(x1, y1);
+  g.lineTo(x1 - s * Math.cos(ang - 0.4), y1 - s * Math.sin(ang - 0.4));
+  g.lineTo(x1 - s * Math.cos(ang + 0.4), y1 - s * Math.sin(ang + 0.4));
+  g.closePath();
+  g.fill();
+}
+
+function drawFault(g, f, x, y) {
+  g.font = '600 12px ' + getMono();
+  g.textAlign = 'center';
+  if (f.type === 'crash') {
+    g.fillStyle = col('panel'); g.beginPath(); g.arc(x, y, 7, 0, Math.PI * 2); g.fill();
+    cross(g, x, y, 5, col('bad'));
+  } else if (f.type === 'restart') {
+    g.fillStyle = col('ok'); g.fillText('↻', x, y - 9);
+  } else if (f.type === 'pause') {
+    g.fillStyle = col('pause'); g.fillText('⏸', x, y - 9);
+  } else if (f.type === 'resume') {
+    g.fillStyle = col('pause'); g.fillText('▸', x, y - 9);
+  } else if (f.type === 'clock') {
+    g.fillStyle = col('fault'); g.fillText(f.rate === 1 ? '⏱' : `⏱${f.rate}×`, x, y - 9);
+  }
+  if (f.trigger) { g.fillStyle = col('fault'); g.fillText('⚡', x, y + 19); }
+  g.textAlign = 'left';
+}
+
+function drawEmit(g, e, x, y) {
+  if (e.kind === 'leader') {
+    g.fillStyle = col('leader');
+    star(g, x, y - 12, 5.5);
+    g.strokeStyle = col('panel'); g.lineWidth = 1; g.stroke();
+  } else if (e.kind === 'truncate' || e.kind === 'fenced' || e.kind === 'expired') {
+    g.fillStyle = col('m-red');
+    g.fillRect(x - 1, y - 13, 2, 9);
+  } else if (e.kind === 'stepdown') {
+    g.fillStyle = col('muted');
+    g.beginPath(); g.moveTo(x - 4, y - 14); g.lineTo(x + 4, y - 14); g.lineTo(x, y - 8); g.fill();
+  } else {
+    g.fillStyle = alpha(col('text'), 0.55);
+    g.beginPath(); g.arc(x, y - 11, 2.2, 0, Math.PI * 2); g.fill();
+  }
+}
+
+function star(g, cx, cy, r) {
+  g.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const rr = i % 2 ? r * 0.45 : r;
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    g.lineTo(cx + rr * Math.cos(a), cy + rr * Math.sin(a));
+  }
+  g.closePath();
+  g.fill();
+}
+
+// ── scrubber ─────────────────────────────────────────────────────────────────
+
+const scrub = $('scrub-canvas');
+const sg = scrub.getContext('2d');
+let SW = 800;
+const SH = 34;
+
+function layoutScrub() {
+  SW = scrub.clientWidth || 800;
+  scrub.width = Math.round(SW * dpr);
+  scrub.height = Math.round(SH * dpr);
+}
+
+function drawScrub() {
+  if (!S.m) return;
+  const g = sg, end = S.m.end;
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, SW, SH);
+  const x = (t) => LABEL_W + (t / end) * (SW - LABEL_W - PAD_R);
+  g.fillStyle = col('panel-2');
+  roundRect(g, LABEL_W, 4, SW - LABEL_W - PAD_R, SH - 8, 5); g.fill();
+  const d = S.m.density;
+  let max = 1;
+  for (const v of d) max = Math.max(max, v);
+  g.fillStyle = alpha(col('accent'), 0.35);
+  const bw = (SW - LABEL_W - PAD_R) / d.length;
+  for (let i = 0; i < d.length; i++) {
+    const h = (d[i] / max) * (SH - 12);
+    g.fillRect(LABEL_W + i * bw, SH - 6 - h, Math.max(1, bw - 0.3), h);
+  }
+  for (const b of S.m.bands) { g.fillStyle = alpha(col('fault'), 0.25); g.fillRect(x(b.t0), 4, Math.max(2, x(b.t1) - x(b.t0)), 4); }
+  for (const f of S.trace.faults) {
+    if (f.type === 'crash' || f.type === 'pause' || f.type === 'heal-all') {
+      g.fillStyle = f.type === 'crash' ? col('bad') : f.type === 'pause' ? col('pause') : col('ok');
+      g.fillRect(x(f.t) - 1, SH - 8, 2, 4);
+    }
+  }
+  const v = S.trace.violation;
+  if (v) { g.fillStyle = col('bad'); g.fillRect(x(v.time) - 1, 2, 2, SH - 4); }
+  // Current view window.
+  g.strokeStyle = col('accent');
+  g.lineWidth = 1;
+  const vx0 = x(clamp(S.view.t0, 0, end)), vx1 = x(clamp(S.view.t1, 0, end));
+  g.fillStyle = alpha(col('accent'), 0.1);
+  g.fillRect(vx0, 2, Math.max(2, vx1 - vx0), SH - 4);
+  g.strokeRect(vx0 + 0.5, 2.5, Math.max(2, vx1 - vx0) - 1, SH - 5);
+  g.fillStyle = col('accent');
+  g.fillRect(x(S.cursor) - 1, 0, 2, SH);
+  g.fillStyle = col('muted');
+  g.font = '10px ' + getMono();
+  g.fillText(fmtTime(end), 4, SH / 2 + 3);
+}
+
+function scrubTo(ev) {
+  const r = scrub.getBoundingClientRect();
+  const t = ((ev.clientX - r.left - LABEL_W) / (SW - LABEL_W - PAD_R)) * S.m.end;
+  setCursor(clamp(t, 0, S.m.end));
+}
+
+// ── hover & interaction ─────────────────────────────────────────────────────
+
+function hitTest(px, py) {
+  if (!S.m || px < LABEL_W) return null;
+  const { laneOf } = S.m;
+  for (const mk of S.m.marks) {
+    if (mk.t < S.view.t0 || mk.t > S.view.t1) continue;
+    const x = xOf(mk.t);
+    const y = mk.lane.y + (mk.kind === 'emit' ? -11 : 0);
+    if (Math.abs(px - x) < 6 && Math.abs(py - y) < 9) return { kind: mk.kind, mk };
+  }
+  for (const o of S.trace.history) {
+    const l = laneOf.get(o.client);
+    if (!l || Math.abs(py - l.y) > 9) continue;
+    const x0 = xOf(o.invoke), x1 = Math.max(x0 + 2, xOf(o.complete === null ? S.m.end : o.complete));
+    if (px >= x0 - 1 && px <= x1 + 1) return { kind: 'op', o };
+  }
+  let best = null, bestD = 6;
+  for (const m of visibleMessages()) {
+    const lf = laneOf.get(m.from), lt = laneOf.get(m.to);
+    if (!lf || !lt) continue;
+    const x0 = xOf(m.sent);
+    let x1, y1;
+    if (m.drop && m.recv === m.sent) { x1 = x0 + 8; y1 = lf.y + Math.sign(lt.y - lf.y) * 10; }
+    else { x1 = xOf(m.recv === null ? S.m.end : m.recv); y1 = lt.y; }
+    const d = segDist(px, py, x0, lf.y, x1, y1);
+    if (d < bestD) { bestD = d; best = m; }
+  }
+  return best ? { kind: 'msg', m: best } : null;
+}
+
+function segDist(px, py, x0, y0, x1, y1) {
+  const dx = x1 - x0, dy = y1 - y0;
+  const len = dx * dx + dy * dy;
+  const t = len ? clamp(((px - x0) * dx + (py - y0) * dy) / len, 0, 1) : 0;
+  return Math.hypot(px - (x0 + t * dx), py - (y0 + t * dy));
+}
+
+function showTip(hit, px, py) {
+  const tip = $('tip');
+  if (!hit) { tip.hidden = true; return; }
+  let html = '';
+  if (hit.kind === 'msg') {
+    const m = hit.m;
+    const fate = m.drop ? `<span style="color:var(--bad)">dropped (${esc(m.drop)})</span>` :
+      m.recv === null ? 'still in flight at the end' : `delivered ${fmtTime(m.recv)} · ${((m.recv - m.sent) / 1000).toFixed(2)}ms`;
+    html = `<div class="h">${esc(m.type)} · ${esc(m.from)} → ${esc(m.to)}${m.dupOf ? ' (duplicate)' : ''}</div>
+      sent ${fmtTime(m.sent)} · ${fate}<pre>${esc(compact(m.payload))}</pre>`;
+  } else if (hit.kind === 'op') {
+    const o = hit.o;
+    const v = S.trace.violation;
+    html = `<div class="h">${esc(o.client)} · ${esc(S.system.model ? S.system.model.describe(o) : o.f)}</div>
+      ${o.type === 'info' ? 'outcome unknown (timed out)' : o.type} · invoked ${fmtTime(o.invoke)} · ` +
+      (o.complete === null ? 'never completed' : `completed ${fmtTime(o.complete)}`) +
+      (v && v.culprit === o.id ? `<div style="color:var(--bad);margin-top:4px">${esc(v.message)}</div>` : '');
+  } else if (hit.kind === 'emit') {
+    html = `<div class="h">${esc(hit.mk.e.node)} ${esc(hit.mk.text)}</div>${fmtTime(hit.mk.t)}`;
+  } else if (hit.kind === 'fault') {
+    html = `<div class="h">${esc(describeFaultShort(hit.mk.f))}</div>${fmtTime(hit.mk.t)}`;
+  }
+  tip.innerHTML = html;
+  tip.hidden = false;
+  const wrap = $('diagram-wrap').getBoundingClientRect();
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  tip.style.left = clamp(px + 14, 4, wrap.width - tw - 4) + 'px';
+  tip.style.top = clamp(py + 14, 4, Math.max(4, wrap.height - th - 4)) + 'px';
+}
+
+function describeFaultShort(f) {
+  const why = f.trigger ? ` (right after ${f.trigger.node} ${f.trigger.kind})` : '';
+  switch (f.type) {
+    case 'crash': return `${f.node} crashes${why}`;
+    case 'restart': return `${f.node} restarts`;
+    case 'pause': return `${f.node} freezes${why}`;
+    case 'resume': return `${f.node} resumes`;
+    case 'clock': return f.rate === 1 ? `${f.node} clock corrected` : `${f.node} clock ×${f.rate}`;
+    default: return f.type;
+  }
+}
+
+function compact(v) {
+  const s = JSON.stringify(v, (k, x) => (Array.isArray(x) && x.length > 8 ? [...x.slice(0, 8), `…+${x.length - 8}`] : x));
+  return s && s.length > 600 ? s.slice(0, 600) + '…' : s;
+}
+
+let drag = null;
+canvas.addEventListener('pointerdown', (ev) => {
+  if (!S.m) return;
+  canvas.setPointerCapture(ev.pointerId);
+  drag = { x: ev.offsetX, t0: S.view.t0, t1: S.view.t1, moved: false };
+});
+canvas.addEventListener('pointermove', (ev) => {
+  if (!S.m) return;
+  if (drag) {
+    const dx = ev.offsetX - drag.x;
+    if (Math.abs(dx) > 3) drag.moved = true;
+    if (drag.moved) {
+      const dt = (dx / plotW()) * (drag.t1 - drag.t0);
+      setView(drag.t0 - dt, drag.t1 - dt);
+      $('tip').hidden = true;
+      return;
+    }
+  }
+  const hit = hitTest(ev.offsetX, ev.offsetY);
+  const changed = (hit && hit.m) !== (S.hover && S.hover.m);
+  S.hover = hit;
+  showTip(hit, ev.offsetX, ev.offsetY);
+  if (changed) draw();
+});
+canvas.addEventListener('pointerup', (ev) => {
+  if (drag && !drag.moved && ev.offsetX > LABEL_W) setCursor(tOf(ev.offsetX));
+  drag = null;
+});
+canvas.addEventListener('pointerleave', () => { S.hover = null; $('tip').hidden = true; draw(); });
+canvas.addEventListener('wheel', (ev) => {
+  if (!S.m) return;
+  ev.preventDefault();
+  const span = S.view.t1 - S.view.t0;
+  if (Math.abs(ev.deltaX) > Math.abs(ev.deltaY)) {
+    const dt = (ev.deltaX / plotW()) * span;
+    return setView(S.view.t0 + dt, S.view.t1 + dt);
+  }
+  const at = tOf(ev.offsetX);
+  const k = Math.exp(ev.deltaY * (ev.ctrlKey ? 0.01 : 0.0022));
+  const nspan = clamp(span * k, 200, S.m.end * 1.05);
+  const f = (at - S.view.t0) / span;
+  setView(at - f * nspan, at - f * nspan + nspan);
+}, { passive: false });
+
+let scrubbing = false;
+scrub.addEventListener('pointerdown', (ev) => { if (!S.m) return; scrubbing = true; scrub.setPointerCapture(ev.pointerId); scrubTo(ev); });
+scrub.addEventListener('pointermove', (ev) => { if (scrubbing) scrubTo(ev); });
+scrub.addEventListener('pointerup', () => { scrubbing = false; });
+
+// ── playback & stepping ─────────────────────────────────────────────────────
+
+let lastFrame = 0;
+function play() {
+  S.playing = !S.playing;
+  $('btn-play').textContent = S.playing ? '❚❚' : '▶';
+  if (S.playing) {
+    if (S.cursor >= S.m.end) S.cursor = 0;
+    lastFrame = performance.now();
+    requestAnimationFrame(tick);
+  }
+}
+
+function tick(now) {
+  if (!S.playing) return;
+  const dt = Math.min(100, now - lastFrame);
+  lastFrame = now;
+  let t = S.cursor + dt * 1000 * S.speed;
+  if (t >= S.m.end) { t = S.m.end; play(); }
+  const span = S.view.t1 - S.view.t0;
+  if (t > S.view.t0 + span * 0.85) S.view = { t0: t - span * 0.15, t1: t - span * 0.15 + span };
+  setCursor(t);
+  if (S.playing) requestAnimationFrame(tick);
+}
+
+function step(dir) {
+  const ts = S.m.times;
+  let lo = 0, hi = ts.length;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (ts[mid] <= S.cursor) lo = mid + 1; else hi = mid; }
+  // lo = first index with time > cursor
+  if (dir > 0 && lo < ts.length) setCursor(ts[lo]);
+  if (dir < 0) {
+    let i = lo - 1;
+    while (i >= 0 && ts[i] >= S.cursor) i--;
+    if (i >= 0) setCursor(ts[i]);
+  }
+}
+
+// ── state panel ─────────────────────────────────────────────────────────────
+
+function snapAt(node, t) {
+  const arr = S.m.snaps.get(node);
+  if (!arr || !arr.length) return null;
+  let lo = 0, hi = arr.length;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (arr[mid].t <= t) lo = mid + 1; else hi = mid; }
+  return lo > 0 ? arr[lo - 1] : null;
+}
+
+function statusAt(node, t) {
+  for (const s of S.m.segs.get(node) || []) if (t >= s.t0 && t < s.t1) return s.status;
+  return 'up';
+}
+
+function cutsAt(t) {
+  for (const b of S.m.bands) if (t >= b.t0 && t < b.t1) return b.cuts;
+  return [];
+}
+
+let stateSig = '';
+function renderState() {
+  if (!S.m) return;
+  const t = S.cursor;
+  $('state-time').textContent = '@ ' + fmtTime(t);
+  const nodes = S.trace.nodes;
+  const parts = nodes.map((id) => {
+    const s = snapAt(id, t);
+    return `${id}:${statusAt(id, t)}:${s ? s.t : -1}`;
+  });
+  const cuts = cutsAt(t);
+  const sig = parts.join('|') + '#' + cuts.length + (S.trace.faults.length);
+  drawTopology(nodes, cuts, t);
+  if (sig === stateSig) return;
+  stateSig = sig;
+  $('states').innerHTML = nodes.map((id) => nodeCard(id, snapAt(id, t), statusAt(id, t))).join('');
+}
+
+function nodeCard(id, snap, status) {
+  const st = snap ? snap.state : {};
+  const role = status === 'down' ? 'crashed' : status === 'paused' ? 'paused' : (st.role || '—');
+  const rc = status === 'down' ? col('bad') : status === 'paused' ? col('pause') :
+    (ROLE_COLOR[st.role] === 'follower' ? col('muted') : roleColor(st.role));
+  const facts = Object.entries(st)
+    .filter(([k, v]) => k !== 'role' && k !== 'log' && k !== 'kv' && (v === null || typeof v !== 'object'))
+    .map(([k, v]) => `<span>${esc(k)} <b>${esc(v === null ? '–' : v)}</b></span>`).join('');
+  let log = '';
+  if (Array.isArray(st.log)) {
+    const MAX = 48;
+    const start = Math.max(0, st.log.length - MAX);
+    const cells = st.log.slice(start).map((e, i) => {
+      const idx = start + i + 1;
+      const [term, what] = Array.isArray(e) ? e : [e.term, ''];
+      const unc = st.commit !== undefined && idx > st.commit;
+      return `<i class="${unc ? 'uncommitted' : ''}" style="background:${termColor(term)}" title="#${idx} · term ${term} · ${esc(what)}${unc ? ' · uncommitted' : ''}">${term}</i>`;
+    }).join('');
+    log = `<div class="logrow">${start ? `<span class="muted" style="font:10px var(--mono)">+${start}</span>` : ''}${cells || '<span class="muted" style="font:11px var(--mono)">empty log</span>'}</div>`;
+  }
+  let kv = '';
+  if (st.kv && typeof st.kv === 'object') {
+    const pairs = Object.entries(st.kv).map(([k, v]) => `${esc(k)}=${esc(JSON.stringify(v))}`);
+    kv = `<div class="kv">${pairs.length ? pairs.join('  ') : '{}'}</div>`;
+  }
+  return `<div class="node ${status === 'down' ? 'down' : ''}">
+    <div class="id">${esc(id)}</div>
+    <div><span class="role" style="background:${alpha(rc, 0.18)};color:${rc}">${esc(role)}</span></div>
+    <div></div><div class="facts">${facts}</div>
+    ${log}${kv}
+  </div>`;
+}
+
+const topo = $('topology');
+const tg = topo.getContext('2d');
+function drawTopology(nodes, cuts, t) {
+  const size = 150;
+  topo.width = size * dpr; topo.height = size * dpr;
+  tg.setTransform(dpr, 0, 0, dpr, 0, 0);
+  tg.clearRect(0, 0, size, size);
+  const n = nodes.length, R = 52, cx = size / 2, cy = size / 2;
+  const pos = nodes.map((_, i) => {
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / n;
+    return [cx + R * Math.cos(a), cy + R * Math.sin(a)];
+  });
+  const blocked = new Set(cuts.map(([a, b]) => a + '>' + b));
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const ab = !blocked.has(nodes[i] + '>' + nodes[j]);
+      const ba = !blocked.has(nodes[j] + '>' + nodes[i]);
+      if (!ab && !ba) continue;
+      tg.strokeStyle = ab && ba ? alpha(col('muted'), 0.6) : alpha(col('fault'), 0.9);
+      tg.setLineDash(ab && ba ? [] : [3, 3]);
+      tg.lineWidth = 1.2;
+      tg.beginPath(); tg.moveTo(...pos[i]); tg.lineTo(...pos[j]); tg.stroke();
+    }
+  }
+  tg.setLineDash([]);
+  nodes.forEach((id, i) => {
+    const st = statusAt(id, t);
+    const snap = snapAt(id, t);
+    const c = st === 'down' ? col('bad') : st === 'paused' ? col('pause') : roleColor(snap && snap.state ? snap.state.role : null);
+    tg.fillStyle = st === 'down' ? col('panel') : c;
+    tg.strokeStyle = c;
+    tg.lineWidth = 2;
+    tg.beginPath(); tg.arc(pos[i][0], pos[i][1], 13, 0, Math.PI * 2); tg.fill(); tg.stroke();
+    tg.fillStyle = st === 'down' ? col('bad') : col('bg');
+    tg.font = '600 10px ' + getMono();
+    tg.textAlign = 'center';
+    tg.fillText(id, pos[i][0], pos[i][1] + 3.5);
+    tg.textAlign = 'left';
+  });
+  if (cuts.length) {
+    tg.fillStyle = col('fault');
+    tg.font = '10px ' + getMono();
+    tg.fillText('partitioned', 4, size - 4);
+  }
+}
+
+// ── story ───────────────────────────────────────────────────────────────────
+
+function renderStory() {
+  const ol = $('story');
+  ol.innerHTML = S.m.story.map((l, i) =>
+    `<li data-i="${i}"><span class="t">${fmtTime(l.t)}</span><span class="${l.kind}">${esc(storyIcon(l))}${esc(l.text)}</span></li>`).join('');
+  ol.querySelectorAll('li').forEach((li) => {
+    li.onclick = () => {
+      const l = S.m.story[+li.dataset.i];
+      const span = S.view.t1 - S.view.t0;
+      setView(l.t - span * 0.5, l.t + span * 0.5);
+      setCursor(l.t);
+    };
+  });
+}
+
+function storyIcon(l) {
+  return l.kind === 'fault' ? '⚡ ' : l.kind === 'culprit' ? '✗ ' : l.kind === 'violation' ? '' : '';
+}
+
+function updateStory() {
+  const items = $('story').children;
+  let nowIdx = -1;
+  S.m.story.forEach((l, i) => { if (l.t <= S.cursor) nowIdx = i; });
+  for (let i = 0; i < items.length; i++) {
+    items[i].className = i === nowIdx ? 'now' : i < nowIdx ? 'past' : 'future';
+  }
+}
+
+// ── lab: the in-browser multiverse ──────────────────────────────────────────
+
+const gridCanvas = $('grid');
+const gg = gridCanvas.getContext('2d');
+
+function initGrid(n, start) {
+  gridCanvas.hidden = false;
+  S.grid = { n, start, cells: new Uint8Array(n) };
+  drawGrid();
+}
+
+function gridGeom() {
+  const w = gridCanvas.clientWidth || 268, h = 150;
+  const n = S.grid.n;
+  let size = Math.max(2, Math.floor(Math.sqrt((w * h) / n)));
+  let cols = Math.floor(w / size);
+  while (Math.ceil(n / cols) * size > h && size > 2) { size--; cols = Math.floor(w / size); }
+  return { w, h, size, cols };
+}
+
+function drawGrid() {
+  if (!S.grid) return;
+  const { w, h, size, cols } = gridGeom();
+  gridCanvas.width = Math.round(w * dpr);
+  gridCanvas.height = Math.round(h * dpr);
+  gg.setTransform(dpr, 0, 0, dpr, 0, 0);
+  gg.clearRect(0, 0, w, h);
+  const gap = size > 4 ? 1 : 0;
+  const colors = [alpha(col('faint'), 0.35), alpha(col('ok'), 0.75), col('bad')];
+  for (let i = 0; i < S.grid.n; i++) {
+    const st = S.grid.cells[i];
+    gg.fillStyle = colors[st];
+    const x = (i % cols) * size, y = Math.floor(i / cols) * size;
+    if (st === 2) {
+      gg.fillRect(x - 1, y - 1, size + 2 - gap, size + 2 - gap);
+    } else gg.fillRect(x, y, size - gap, size - gap);
+  }
+}
+
+function markGrid(i, ok) {
+  if (!S.grid) return;
+  S.grid.cells[i] = ok ? 1 : 2;
+}
+
+gridCanvas.addEventListener('click', (ev) => {
+  if (!S.grid || S.exploring) return;
+  const { size, cols } = gridGeom();
+  const i = Math.floor(ev.offsetY / size) * cols + Math.floor(ev.offsetX / size);
+  if (i < 0 || i >= S.grid.n || S.grid.cells[i] === 0) return;
+  runOne(S.grid.start + i);
+});
+gridCanvas.title = 'Each square is a universe. Click one to open it.';
+
+function selectedSystem() { return SYSTEMS[$('sys').value]; }
+function selectedBugs() { return [...document.querySelectorAll('#bugs input:checked')].map((x) => x.value); }
+
+function buildLab(initialSystem, initialBugs) {
+  const sel = $('sys');
+  sel.innerHTML = Object.entries(SYSTEMS).map(([k, s]) => `<option value="${k}">${esc(s.title || k)}</option>`).join('');
+  sel.value = initialSystem;
+  sel.onchange = () => buildBugs([]);
+  buildBugs(initialBugs);
+}
+
+function buildBugs(checked) {
+  const sys = selectedSystem();
+  $('sys-summary').textContent = sys.summary || '';
+  const box = $('bugs');
+  box.innerHTML = Object.entries(sys.bugs || {}).map(([k, d]) => `
+    <label class="bug ${checked.includes(k) ? 'on' : ''}">
+      <input type="checkbox" value="${esc(k)}" ${checked.includes(k) ? 'checked' : ''}>
+      <div><b>${esc(k)}</b><span>${esc(d)}</span></div>
+    </label>`).join('') +
+    (Object.keys(sys.bugs || {}).length
+      ? `<p class="muted small" style="margin:4px 2px 0">No bug checked = hunt for real bugs in the correct implementation.</p>`
+      : `<p class="muted small" style="margin:4px 2px 0">No planted bugs — this design is wrong as written. Explore to see how.</p>`);
+  box.querySelectorAll('input').forEach((inp) => {
+    inp.onchange = () => inp.closest('.bug').classList.toggle('on', inp.checked);
+  });
+}
+
+function labStatus(html) { $('lab-status').innerHTML = html; }
+
+function runOne(seed) {
+  const sys = selectedSystem();
+  const bugs = selectedBugs();
+  const scenario = makeScenario(sys, seed, { bugs });
+  const r = runScenario(sys, scenario, { record: true });
+  loadTrace(r.trace, sys, { fingerprint: r.fingerprint, bugs });
+  labStatus(`Universe <b>#${seed}</b>: ${r.ok ? '<span class="good">every invariant held</span>' : `<span class="bad">${esc(r.violation.signature)}</span>`} · ` +
+    `${r.stats.events.toLocaleString()} events, ${r.stats.sent.toLocaleString()} messages, ${scenario.faults.length + scenario.triggers.length} faults.`);
+}
+
+async function explore() {
+  if (S.exploring) { S.exploring = false; return; }
+  const sys = selectedSystem();
+  const bugs = selectedBugs();
+  const n = clamp(+$('n-seeds').value || 1000, 1, 100000);
+  const start = Math.max(1, +$('n-start').value || 1);
+  S.exploring = true;
+  const btn = $('btn-explore');
+  btn.textContent = 'Stop';
+  $('btn-run').disabled = true;
+  initGrid(n, start);
+  const t0 = performance.now();
+  let lastPaint = 0;
+  const res = await exploreAsync(sys, {
+    seeds: n, start, bugs,
+    shouldStop: () => !S.exploring,
+    onUniverse: ({ seed, result, explored }) => {
+      markGrid(seed - start, result.ok);
+      const now = performance.now();
+      if (now - lastPaint > 60 || !result.ok) {
+        lastPaint = now;
+        drawGrid();
+        const rate = Math.round(explored / ((now - t0) / 1000));
+        labStatus(`Explored <b>${explored.toLocaleString()}</b> / ${n.toLocaleString()} universes · ${rate.toLocaleString()}/s`);
+      }
+    },
+  });
+  drawGrid();
+  S.exploring = false;
+  btn.textContent = 'Explore the multiverse';
+  $('btn-run').disabled = false;
+  const secs = ((performance.now() - t0) / 1000).toFixed(1);
+  if (!res.failures.length) {
+    labStatus(`<span class="good">✓ All ${res.explored.toLocaleString()} universes upheld every invariant</span> (${secs}s). ` +
+      `Click any square to open that universe.`);
+    return;
+  }
+  const f = res.failures[0];
+  labStatus(`<span class="bad">✗ Universe <b>#${f.seed}</b> broke</span> after ${res.explored.toLocaleString()} universes (${secs}s):<br>` +
+    `${esc(f.result.violation.message)}<br><br><b>Shrinking…</b>`);
+  await nextFrame();
+  const s0 = performance.now();
+  const sh = shrink(sys, f.scenario, f.result, { maxRuns: 500 });
+  const replay = runScenario(sys, sh.scenario, { record: true });
+  loadTrace(replay.trace, sys, { fingerprint: replay.fingerprint, bugs });
+  const same = replay.fingerprint === sh.result.fingerprint;
+  labStatus(`<span class="bad">✗ Universe <b>#${f.seed}</b> broke</span> after ${res.explored.toLocaleString()} universes (${secs}s).<br>` +
+    `Shrunk in ${sh.runs} replays (${Math.round(performance.now() - s0)}ms): ` +
+    `<b>${sh.from.faults} → ${sh.to.faults}</b> faults, ${sh.from.ops ?? 0} → ${sh.to.ops ?? 0} ops, ` +
+    `${fmtTime(sh.from.duration)} → ${fmtTime(sh.to.duration)}.<br>` +
+    `${same ? '✓ replay verified bit-for-bit identical.' : '⚠ replay diverged.'} Scrub the timeline or read the story below.`);
+}
+
+// ── download repro ──────────────────────────────────────────────────────────
+
+function downloadRepro() {
+  if (!S.trace || !S.trace.scenario) return;
+  const sc = S.trace.scenario;
+  const repro = {
+    everett: 1, system: S.system.name, bugs: sc.bugs || [],
+    violation: S.trace.violation, fingerprint: S.fingerprint, scenario: sc,
+  };
+  const blob = new Blob([JSON.stringify(repro, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `everett-${S.system.name}-${sc.seed}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+// A system recorded by the CLI but not bundled here: rebuild just enough of it
+// from the metadata the CLI embedded (narration text, colours, model).
+function foreignSystem(data) {
+  const meta = data.meta || {};
+  const model = Object.values(models).find((m) => m.name === meta.model) || null;
+  return {
+    name: data.system || 'system',
+    title: meta.title || data.system || 'system',
+    summary: meta.summary || '',
+    messageColors: meta.messageColors || {},
+    model,
+    describe: (e) => e.text || null,
+  };
+}
+
+// ── wiring ──────────────────────────────────────────────────────────────────
+
+function toggleTheme() {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  root.dataset.theme = dark ? 'light' : 'dark';
+  try { localStorage.setItem('everett-theme', root.dataset.theme); } catch { /* storage unavailable */ }
+  readColors();
+  stateSig = '';
+  renderState();
+  draw();
+  drawGrid();
+}
+
+function init() {
+  try {
+    const saved = localStorage.getItem('everett-theme');
+    if (saved) document.documentElement.dataset.theme = saved;
+  } catch { /* storage unavailable */ }
+  readColors();
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { readColors(); stateSig = ''; renderState(); draw(); drawGrid(); });
+
+  $('btn-play').onclick = play;
+  $('btn-prev').onclick = () => step(-1);
+  $('btn-next').onclick = () => step(1);
+  $('btn-fit').onclick = fit;
+  $('btn-focus').onclick = focusViolation;
+  $('speed').onchange = (e) => { S.speed = +e.target.value; };
+  $('btn-explore').onclick = explore;
+  $('btn-run').onclick = () => runOne(Math.max(1, +$('n-start').value || 1));
+  $('btn-theme').onclick = toggleTheme;
+  $('btn-download').onclick = downloadRepro;
+  document.addEventListener('keydown', (e) => {
+    if (e.target.matches('input, select, textarea') || !S.m) return;
+    if (e.key === ' ') { e.preventDefault(); play(); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); step(-1); }
+    else if (e.key === 'f') fit();
+    else if (e.key === 'v') focusViolation();
+  });
+  new ResizeObserver(() => { layout(); drawGrid(); }).observe($('diagram-wrap'));
+
+  const data = globalThis.EVERETT_DATA || {};
+  if (data.trace) {
+    const sys = SYSTEMS[data.system] || foreignSystem(data);
+    buildLab(SYSTEMS[data.system] ? sys.name : 'raft', SYSTEMS[data.system] ? data.trace.scenario?.bugs || [] : []);
+    loadTrace(data.trace, sys);
+    labStatus(SYSTEMS[data.system]
+      ? 'Showing a recorded universe. Explore more from here — everything runs in this page.'
+      : `Showing a recorded universe of <b>${esc(sys.title)}</b>. Its code isn't bundled into this page, so the Lab explores the built-in systems.`);
+  } else {
+    buildLab('raft', ['forget-vote']);
+    runOne(1);
+    labStatus('Showing universe <b>#1</b>: a healthy Raft cluster weathering partitions, crashes and pauses. ' +
+      '<b>forget-vote</b> is armed — press <b>Explore</b> to search for the universe where it breaks.');
+  }
+}
+
+init();
+
+
+}
+};
+const __cache = {};
+function __require(id) {
+  if (__cache[id]) return __cache[id];
+  const ex = (__cache[id] = {});
+  __defs[id](ex, __require);
+  return ex;
+}
+globalThis.Everett = {
+  core: __require("src/index.js"),
+  systems: {
+    raft: __require("examples/raft/index.js").system,
+    "lease-lock": __require("examples/lease-lock/index.js").system,
+    "gossip-register": __require("examples/gossip-register/index.js").system,
+  },
+  require: __require,
+};
+__require("viz/app.js");
+})();
+</script>
+</body>
+</html>

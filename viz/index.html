@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Everett Lab</title>
+<meta name="description" content="Deterministic multiverse testing for distributed systems — explore universes, find the one that breaks, and scrub through it.">
+<style>
+/*__STYLE__*/
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+      <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".35"/>
+      <circle cx="16" cy="16" r="8" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".6"/>
+      <circle cx="16" cy="16" r="3.2" fill="currentColor"/>
+      <circle cx="27" cy="11" r="2" fill="var(--bad)"/>
+    </svg>
+    <div>
+      <div class="name">everett</div>
+      <div class="tag">deterministic multiverse testing</div>
+    </div>
+  </div>
+  <div id="verdict" class="verdict"></div>
+  <div class="top-actions">
+    <button id="btn-download" class="ghost" title="Download this universe as a repro file">⤓ repro</button>
+    <button id="btn-theme" class="ghost" title="Toggle light/dark">◐</button>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="lab" id="lab">
+    <section>
+      <h2>Lab</h2>
+      <label class="field">
+        <span>System</span>
+        <select id="sys"></select>
+      </label>
+      <p id="sys-summary" class="muted small"></p>
+    </section>
+    <section>
+      <h3>Planted bugs</h3>
+      <div id="bugs" class="bugs"></div>
+    </section>
+    <section class="row2">
+      <label class="field"><span>Universes</span><input id="n-seeds" type="number" min="1" max="100000" value="2000"></label>
+      <label class="field"><span>From seed</span><input id="n-start" type="number" min="1" value="1"></label>
+    </section>
+    <section class="buttons">
+      <button id="btn-explore" class="primary">Explore the multiverse</button>
+      <button id="btn-run" class="ghost" title="Run and show the 'from seed' universe">Run one</button>
+    </section>
+    <section>
+      <canvas id="grid" class="grid" height="150" hidden></canvas>
+      <div id="lab-status" class="lab-status muted small">Pick a bug (or none) and explore. Every universe is a different world of partitions, crashes, pauses and clock drift — all reproducible from its seed.</div>
+    </section>
+  </aside>
+
+  <section class="viewer">
+    <div class="toolbar">
+      <div class="transport">
+        <button id="btn-prev" class="icon" title="Previous event (←)">⏮</button>
+        <button id="btn-play" class="icon" title="Play / pause (space)">▶</button>
+        <button id="btn-next" class="icon" title="Next event (→)">⏭</button>
+        <select id="speed" title="Playback speed">
+          <option value="0.02">0.02×</option>
+          <option value="0.1" selected>0.1×</option>
+          <option value="0.5">0.5×</option>
+          <option value="1">1×</option>
+        </select>
+        <span id="clock" class="clock">0.000s</span>
+      </div>
+      <div class="view-actions">
+        <button id="btn-fit" class="ghost" title="Fit whole universe (f)">fit</button>
+        <button id="btn-focus" class="ghost" title="Zoom to the violation (v)">violation</button>
+        <div id="msg-filter" class="chips" title="Show/hide message types"></div>
+      </div>
+    </div>
+    <div class="diagram-wrap" id="diagram-wrap">
+      <canvas id="diagram"></canvas>
+      <div id="tip" class="tip" hidden></div>
+    </div>
+    <div class="scrub" id="scrub">
+      <canvas id="scrub-canvas"></canvas>
+    </div>
+    <div class="panels">
+      <div class="panel">
+        <h3>World state <span id="state-time" class="muted"></span></h3>
+        <div class="state-row">
+          <canvas id="topology" width="150" height="150" title="Who can talk to whom right now"></canvas>
+          <div id="states" class="states"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Story</h3>
+        <ol id="story" class="story"></ol>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+/*__DATA__*/
+</script>
+<script>
+/*__BUNDLE__*/
+</script>
+</body>
+</html>

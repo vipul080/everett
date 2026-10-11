@@ -1,0 +1,43 @@
+{
+  "name": "everett",
+  "version": "0.1.0",
+  "description": "Deterministic multiverse testing for distributed systems: run your code in ten thousand universes, find the one where it breaks, shrink it, replay it, scrub through it.",
+  "type": "module",
+  "bin": {
+    "everett": "bin/everett.js"
+  },
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./examples/raft": "./examples/raft/index.js",
+    "./examples/lease-lock": "./examples/lease-lock/index.js"
+  },
+  "scripts": {
+    "test": "node --test test/",
+    "build": "node scripts/build.js",
+    "demo": "node bin/everett.js explore raft --bug stale-reads",
+    "zoo": "node scripts/zoo.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "distributed-systems",
+    "deterministic-simulation",
+    "fuzzing",
+    "raft",
+    "jepsen",
+    "linearizability",
+    "chaos-engineering",
+    "testing"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vipul080/everett.git"
+  },
+  "homepage": "https://github.com/vipul080/everett#readme",
+  "bugs": {
+    "url": "https://github.com/vipul080/everett/issues"
+  }
+}
