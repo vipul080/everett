@@ -4,7 +4,7 @@
 
 **Run your distributed system in ten thousand parallel universes.<br>
 Find the one where it breaks. Shrink it to a story you can read in ten seconds.<br>
-Replay it — bit for bit — forever.**
+Replay it, bit for bit, forever.**
 
 Deterministic simulation testing for distributed systems, with a time-travel debugger that runs in your browser.<br>
 Zero dependencies. Plain JavaScript. Node or browser.
